@@ -2,26 +2,27 @@ type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 
 class WhatsAppService {
   private connectionStatus: ConnectionStatus = 'disconnected';
-  private API_URL: string;
+  private supabaseUrl: string;
+  private supabaseKey: string;
 
   constructor() {
-    // Get the Supabase URL from environment variables
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    if (!supabaseUrl) {
-      console.error('VITE_SUPABASE_URL is not defined');
-      throw new Error('VITE_SUPABASE_URL is not defined');
+    this.supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    this.supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+    if (!this.supabaseUrl || !this.supabaseKey) {
+      console.error('Supabase configuration is missing');
+      throw new Error('Supabase configuration is missing');
     }
-    this.API_URL = supabaseUrl;
   }
 
   async initialize() {
     this.connectionStatus = 'connecting';
     try {
-      const response = await fetch(`${this.API_URL}/functions/v1/whatsapp-init`, {
+      const response = await fetch(`${this.supabaseUrl}/functions/v1/whatsapp-init`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+          'Authorization': `Bearer ${this.supabaseKey}`
         }
       });
       
@@ -39,9 +40,9 @@ class WhatsAppService {
 
   async getQRCode(): Promise<string> {
     try {
-      const response = await fetch(`${this.API_URL}/functions/v1/whatsapp-qr`, {
+      const response = await fetch(`${this.supabaseUrl}/functions/v1/whatsapp-qr`, {
         headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+          'Authorization': `Bearer ${this.supabaseKey}`
         }
       });
       
