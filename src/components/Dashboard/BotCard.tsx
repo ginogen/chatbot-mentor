@@ -1,14 +1,16 @@
 import { Bot, Plus } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 interface BotCardProps {
   isNew?: boolean;
   name?: string;
   status?: "active" | "inactive";
+  whatsappStatus?: "disconnected" | "connecting" | "connected";
   onClick: () => void;
 }
 
-export const BotCard = ({ isNew, name, status, onClick }: BotCardProps) => {
+export const BotCard = ({ isNew, name, status, whatsappStatus, onClick }: BotCardProps) => {
   if (isNew) {
     return (
       <Card
@@ -28,15 +30,28 @@ export const BotCard = ({ isNew, name, status, onClick }: BotCardProps) => {
     >
       <div className="flex items-center justify-between">
         <Bot className="w-8 h-8 text-primary" />
-        <span
-          className={`px-2 py-1 rounded-full text-xs ${
-            status === "active"
-              ? "bg-green-100 text-green-800"
-              : "bg-gray-100 text-gray-800"
-          }`}
-        >
-          {status}
-        </span>
+        <div className="flex gap-2">
+          <Badge
+            variant={status === "active" ? "default" : "secondary"}
+            className={status === "active" ? "bg-green-500" : ""}
+          >
+            {status}
+          </Badge>
+          {whatsappStatus && (
+            <Badge
+              variant="outline"
+              className={`${
+                whatsappStatus === "connected"
+                  ? "border-green-500 text-green-700"
+                  : whatsappStatus === "connecting"
+                  ? "border-yellow-500 text-yellow-700"
+                  : "border-gray-500 text-gray-700"
+              }`}
+            >
+              WhatsApp: {whatsappStatus}
+            </Badge>
+          )}
+        </div>
       </div>
       <div>
         <h3 className="font-semibold text-lg">{name}</h3>

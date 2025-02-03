@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BotCard } from "@/components/Dashboard/BotCard";
 import { CreateBotModal } from "@/components/Dashboard/CreateBotModal";
 import { useToast } from "@/components/ui/use-toast";
+import { whatsappService } from "@/services/whatsappService";
 
 interface Bot {
   id: string;
   name: string;
   status: "active" | "inactive";
+  whatsappStatus: "disconnected" | "connecting" | "connected";
 }
 
 const Index = () => {
@@ -14,11 +16,28 @@ const Index = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const { toast } = useToast();
 
+  useEffect(() => {
+    const initializeWhatsApp = async () => {
+      try {
+        await whatsappService.initialize();
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to initialize WhatsApp connection",
+          variant: "destructive",
+        });
+      }
+    };
+
+    initializeWhatsApp();
+  }, [toast]);
+
   const handleCreateBot = (name: string) => {
     const newBot: Bot = {
       id: Date.now().toString(),
       name,
       status: "inactive",
+      whatsappStatus: whatsappService.getConnectionStatus(),
     };
     setBots([...bots, newBot]);
     toast({
@@ -44,6 +63,7 @@ const Index = () => {
               key={bot.id}
               name={bot.name}
               status={bot.status}
+              whatsappStatus={bot.whatsappStatus}
               onClick={() => {
                 toast({
                   title: "Coming Soon",
