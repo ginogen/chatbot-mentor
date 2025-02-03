@@ -14,15 +14,18 @@ interface Bot {
 const Index = () => {
   const [bots, setBots] = useState<Bot[]>([]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [qrCode, setQrCode] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     const initializeWhatsApp = async () => {
       try {
         await whatsappService.initialize();
+        const qrCode = await whatsappService.getQRCode();
+        setQrCode(qrCode);
         toast({
           title: "WhatsApp Connection",
-          description: "Successfully connected to WhatsApp service",
+          description: "Scan the QR code to connect WhatsApp",
         });
       } catch (error) {
         toast({
@@ -59,6 +62,18 @@ const Index = () => {
             Create and manage your WhatsApp chatbots easily
           </p>
         </div>
+
+        {qrCode && (
+          <div className="mb-8 p-6 bg-white rounded-lg shadow-sm">
+            <h2 className="text-xl font-semibold mb-4">Connect WhatsApp</h2>
+            <p className="mb-4">Scan this QR code with WhatsApp on your phone to connect:</p>
+            <img
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrCode)}`}
+              alt="WhatsApp QR Code"
+              className="mx-auto"
+            />
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <BotCard isNew onClick={() => setIsCreateModalOpen(true)} />
