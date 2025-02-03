@@ -20,10 +20,14 @@ const Index = () => {
     const initializeWhatsApp = async () => {
       try {
         await whatsappService.initialize();
+        toast({
+          title: "WhatsApp Connection",
+          description: "Successfully connected to WhatsApp service",
+        });
       } catch (error) {
         toast({
           title: "Error",
-          description: "Failed to initialize WhatsApp connection",
+          description: "Failed to connect to WhatsApp service. Please try again later.",
           variant: "destructive",
         });
       }

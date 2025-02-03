@@ -1,48 +1,44 @@
-import { Client } from 'whatsapp-web.js';
-import QRCode from 'qrcode-terminal';
+type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 
 class WhatsAppService {
-  private client: Client;
-  private qrCode: string = '';
-  private connectionStatus: 'disconnected' | 'connecting' | 'connected' = 'disconnected';
-
-  constructor() {
-    this.client = new Client({});
-    this.setupEventListeners();
-  }
-
-  private setupEventListeners() {
-    this.client.on('qr', (qr) => {
-      this.qrCode = qr;
-      QRCode.generate(qr, { small: true });
-    });
-
-    this.client.on('ready', () => {
-      this.connectionStatus = 'connected';
-      console.log('Client is ready!');
-    });
-
-    this.client.on('disconnected', () => {
-      this.connectionStatus = 'disconnected';
-    });
-  }
+  private connectionStatus: ConnectionStatus = 'disconnected';
+  private API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
   async initialize() {
     this.connectionStatus = 'connecting';
     try {
-      await this.client.initialize();
+      const response = await fetch(`${this.API_URL}/whatsapp/init`, {
+        method: 'POST',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to initialize WhatsApp');
+      }
+      
+      this.connectionStatus = 'connected';
     } catch (error) {
-      console.error('Failed to initialize WhatsApp client:', error);
+      console.error('Failed to initialize WhatsApp:', error);
       this.connectionStatus = 'disconnected';
+      throw error;
     }
   }
 
-  getConnectionStatus() {
+  getConnectionStatus(): ConnectionStatus {
     return this.connectionStatus;
   }
 
-  getQRCode() {
-    return this.qrCode;
+  async getQRCode(): Promise<string> {
+    try {
+      const response = await fetch(`${this.API_URL}/whatsapp/qr`);
+      if (!response.ok) {
+        throw new Error('Failed to get QR code');
+      }
+      const data = await response.json();
+      return data.qrCode;
+    } catch (error) {
+      console.error('Failed to get QR code:', error);
+      throw error;
+    }
   }
 }
 
