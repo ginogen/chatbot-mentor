@@ -26,7 +26,6 @@ export function ProfileSection() {
 
   const loadUserData = async () => {
     try {
-      // Get user email and ID
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("No authenticated user found");
       
@@ -34,7 +33,6 @@ export function ProfileSection() {
         setEmail(user.email);
       }
 
-      // Get user profile
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("first_name")
@@ -47,7 +45,6 @@ export function ProfileSection() {
         setFirstName(profile.first_name);
       }
 
-      // Get user role
       const { data: roleData } = await supabase.rpc('get_highest_role', {
         user_id: user.id
       });
@@ -98,41 +95,46 @@ export function ProfileSection() {
   };
 
   return (
-    <Card className="p-6">
-      <h2 className="text-2xl font-semibold mb-6">Profile Settings</h2>
+    <Card className="p-6 bg-secondary/50 backdrop-blur-lg border border-white/10">
+      <h2 className="text-2xl font-semibold mb-6 text-white">Profile Settings</h2>
       <form onSubmit={handleUpdateProfile} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="firstName">First Name</Label>
+          <Label htmlFor="firstName" className="text-gray-200">First Name</Label>
           <Input
             id="firstName"
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
             placeholder="Enter your first name"
+            className="bg-secondary/70 border-white/10 text-white placeholder:text-gray-400"
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email" className="text-gray-200">Email</Label>
           <Input
             id="email"
             value={email}
             disabled
-            className="bg-gray-50"
+            className="bg-secondary/70 border-white/10 text-white opacity-70"
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="role">Role</Label>
+          <Label htmlFor="role" className="text-gray-200">Role</Label>
           <Select value={role} disabled>
-            <SelectTrigger className="bg-gray-50">
+            <SelectTrigger className="bg-secondary/70 border-white/10 text-white opacity-70">
               <SelectValue placeholder="Select a role" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="admin">Admin</SelectItem>
-              <SelectItem value="supervisor">Supervisor</SelectItem>
-              <SelectItem value="agent">Agent</SelectItem>
+            <SelectContent className="bg-secondary border-white/10">
+              <SelectItem value="admin" className="text-white">Admin</SelectItem>
+              <SelectItem value="supervisor" className="text-white">Supervisor</SelectItem>
+              <SelectItem value="agent" className="text-white">Agent</SelectItem>
             </SelectContent>
           </Select>
         </div>
-        <Button type="submit" disabled={isLoading}>
+        <Button 
+          type="submit" 
+          disabled={isLoading}
+          className="bg-primary hover:bg-primary-dark text-white"
+        >
           {isLoading ? "Updating..." : "Update Profile"}
         </Button>
       </form>

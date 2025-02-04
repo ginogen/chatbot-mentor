@@ -53,11 +53,11 @@ export function InviteUserSection() {
   };
 
   return (
-    <Card className="p-6">
-      <h2 className="text-2xl font-semibold mb-6">Invite User</h2>
+    <Card className="p-6 bg-secondary/50 backdrop-blur-lg border border-white/10">
+      <h2 className="text-2xl font-semibold mb-6 text-white">Invite User</h2>
       <form onSubmit={handleInviteUser} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email" className="text-gray-200">Email</Label>
           <Input
             id="email"
             type="email"
@@ -65,22 +65,27 @@ export function InviteUserSection() {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Enter email address"
             required
+            className="bg-secondary/70 border-white/10 text-white placeholder:text-gray-400"
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="role">Role</Label>
+          <Label htmlFor="role" className="text-gray-200">Role</Label>
           <Select value={role} onValueChange={(value: "admin" | "supervisor" | "agent") => setRole(value)}>
-            <SelectTrigger>
+            <SelectTrigger className="bg-secondary/70 border-white/10 text-white">
               <SelectValue placeholder="Select a role" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="admin">Admin</SelectItem>
-              <SelectItem value="supervisor">Supervisor</SelectItem>
-              <SelectItem value="agent">Agent</SelectItem>
+            <SelectContent className="bg-secondary border-white/10">
+              <SelectItem value="admin" className="text-white">Admin</SelectItem>
+              <SelectItem value="supervisor" className="text-white">Supervisor</SelectItem>
+              <SelectItem value="agent" className="text-white">Agent</SelectItem>
             </SelectContent>
           </Select>
         </div>
-        <Button type="submit" disabled={isLoading}>
+        <Button 
+          type="submit" 
+          disabled={isLoading}
+          className="bg-primary hover:bg-primary-dark text-white"
+        >
           {isLoading ? "Sending..." : "Send Invitation"}
         </Button>
       </form>
