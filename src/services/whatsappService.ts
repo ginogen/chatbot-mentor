@@ -72,7 +72,12 @@ class WhatsAppService {
         .eq('bot_id', botId);
 
       if (error) throw error;
-      return data || [];
+      
+      // Ensure the status is one of the allowed values and type cast the result
+      return (data || []).map(conn => ({
+        ...conn,
+        status: (conn.status as WhatsAppConnection['status']) || 'disconnected'
+      }));
     } catch (error) {
       console.error('Failed to get WhatsApp connections:', error);
       throw error;
@@ -91,7 +96,12 @@ class WhatsAppService {
         .single();
 
       if (error) throw error;
-      return data;
+      
+      // Ensure the status is properly typed
+      return {
+        ...data,
+        status: (data.status as WhatsAppConnection['status']) || 'disconnected'
+      };
     } catch (error) {
       console.error('Failed to create WhatsApp connection:', error);
       throw error;
