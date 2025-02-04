@@ -9,20 +9,26 @@ const corsHeaders = {
 };
 
 const parseNaturalDate = (dateStr: string): Date | null => {
+  console.log('Attempting to parse date:', dateStr);
   const now = new Date();
   dateStr = dateStr.toLowerCase().trim();
 
+  // Handle "mañana X am/pm"
   if (dateStr.includes('mañana')) {
+    console.log('Detected "mañana" pattern');
     const tomorrow = addDays(now, 1);
-    const timeMatch = dateStr.match(/(\d{1,2})(?:\s*)?(?:am|pm)/);
+    const timeMatch = dateStr.match(/(\d{1,2})(?:\s*)?(?:am|pm)/i);
     if (timeMatch) {
       let hours = parseInt(timeMatch[1]);
       if (dateStr.includes('pm') && hours < 12) hours += 12;
+      if (dateStr.includes('am') && hours === 12) hours = 0;
+      console.log('Setting time to:', hours);
       return setHours(setMinutes(tomorrow, 0), hours);
     }
     return tomorrow;
   }
 
+  // Handle weekdays (both with and without "próximo")
   const weekdays = {
     'lunes': 1, 'martes': 2, 'miércoles': 3, 'miercoles': 3,
     'jueves': 4, 'viernes': 5, 'sábado': 6, 'sabado': 6, 'domingo': 0
@@ -30,20 +36,28 @@ const parseNaturalDate = (dateStr: string): Date | null => {
 
   for (const [day, value] of Object.entries(weekdays)) {
     if (dateStr.includes(day)) {
+      console.log('Detected weekday:', day);
       let targetDate = now;
-      while (targetDate.getDay() !== value) {
+      const isNextWeek = dateStr.includes('próximo') || dateStr.includes('proximo');
+      
+      // Find next occurrence of this weekday
+      while (targetDate.getDay() !== value || (isNextWeek && targetDate <= addDays(now, 1))) {
         targetDate = addDays(targetDate, 1);
       }
-      const timeMatch = dateStr.match(/(\d{1,2})(?:\s*)?(?:am|pm)/);
+
+      const timeMatch = dateStr.match(/(\d{1,2})(?:\s*)?(?:am|pm)/i);
       if (timeMatch) {
         let hours = parseInt(timeMatch[1]);
         if (dateStr.includes('pm') && hours < 12) hours += 12;
+        if (dateStr.includes('am') && hours === 12) hours = 0;
+        console.log('Setting time for weekday to:', hours);
         return setHours(setMinutes(targetDate, 0), hours);
       }
       return targetDate;
     }
   }
 
+  // Handle specific dates like "6 de febrero"
   const monthNames = {
     'enero': 0, 'febrero': 1, 'marzo': 2, 'abril': 3, 'mayo': 4, 'junio': 5,
     'julio': 6, 'agosto': 7, 'septiembre': 8, 'octubre': 9, 'noviembre': 10, 'diciembre': 11
@@ -51,14 +65,23 @@ const parseNaturalDate = (dateStr: string): Date | null => {
 
   for (const [month, value] of Object.entries(monthNames)) {
     if (dateStr.includes(month)) {
-      const dayMatch = dateStr.match(/(\d{1,2})/);
+      console.log('Detected month:', month);
+      const dayMatch = dateStr.match(/(\d{1,2})\s+(?:de\s+)?/);
       if (dayMatch) {
         const day = parseInt(dayMatch[1]);
         const date = new Date(now.getFullYear(), value, day);
-        const timeMatch = dateStr.match(/(\d{1,2})(?:\s*)?(?:am|pm)/);
+        
+        // If the date is in the past, assume next year
+        if (date < now) {
+          date.setFullYear(date.getFullYear() + 1);
+        }
+
+        const timeMatch = dateStr.match(/(\d{1,2})(?:\s*)?(?:am|pm)/i);
         if (timeMatch) {
           let hours = parseInt(timeMatch[1]);
           if (dateStr.includes('pm') && hours < 12) hours += 12;
+          if (dateStr.includes('am') && hours === 12) hours = 0;
+          console.log('Setting time for specific date to:', hours);
           return setHours(setMinutes(date, 0), hours);
         }
         return date;
@@ -66,6 +89,21 @@ const parseNaturalDate = (dateStr: string): Date | null => {
     }
   }
 
+  // Handle "hoy X am/pm"
+  if (dateStr.includes('hoy')) {
+    console.log('Detected "hoy" pattern');
+    const timeMatch = dateStr.match(/(\d{1,2})(?:\s*)?(?:am|pm)/i);
+    if (timeMatch) {
+      let hours = parseInt(timeMatch[1]);
+      if (dateStr.includes('pm') && hours < 12) hours += 12;
+      if (dateStr.includes('am') && hours === 12) hours = 0;
+      console.log('Setting time for today to:', hours);
+      return setHours(setMinutes(now, 0), hours);
+    }
+    return now;
+  }
+
+  console.log('No matching date pattern found');
   return null;
 };
 
@@ -111,10 +149,11 @@ serve(async (req) => {
         
         const parsedDate = parseNaturalDate(rawDate);
         if (!parsedDate) {
+          console.error('Failed to parse date:', rawDate);
           throw new Error('No se pudo interpretar la fecha proporcionada');
         }
 
-        console.log('Parsed date:', parsedDate);
+        console.log('Successfully parsed date:', format(parsedDate, 'yyyy-MM-dd HH:mm', { locale: es }));
         
         const start = startOfDay(parsedDate);
         const end = endOfDay(parsedDate);
@@ -138,6 +177,7 @@ serve(async (req) => {
         
         const parsedDate = parseNaturalDate(rawDate);
         if (!parsedDate) {
+          console.error('Failed to parse date for scheduling:', rawDate);
           throw new Error('No se pudo interpretar la fecha proporcionada');
         }
 
