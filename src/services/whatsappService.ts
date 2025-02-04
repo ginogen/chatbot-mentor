@@ -16,7 +16,7 @@ class WhatsAppService {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session?.access_token) {
-        throw new Error('User must be authenticated to initialize WhatsApp');
+        throw new Error('No authentication session found');
       }
 
       const response = await supabase.functions.invoke('whatsapp-init', {
@@ -27,6 +27,7 @@ class WhatsAppService {
       });
 
       if (response.error) {
+        console.error('WhatsApp initialization error:', response.error);
         throw response.error;
       }
       
@@ -42,7 +43,7 @@ class WhatsAppService {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session?.access_token) {
-        throw new Error('User must be authenticated to get QR code');
+        throw new Error('No authentication session found');
       }
       
       const response = await supabase.functions.invoke('whatsapp-qr', {
@@ -71,12 +72,7 @@ class WhatsAppService {
         .eq('bot_id', botId);
 
       if (error) throw error;
-      
-      // Ensure the status is one of the allowed values
-      return data.map(conn => ({
-        ...conn,
-        status: (conn.status as 'disconnected' | 'connecting' | 'connected') || 'disconnected'
-      }));
+      return data || [];
     } catch (error) {
       console.error('Failed to get WhatsApp connections:', error);
       throw error;
@@ -95,7 +91,7 @@ class WhatsAppService {
         .single();
 
       if (error) throw error;
-      return data as WhatsAppConnection;
+      return data;
     } catch (error) {
       console.error('Failed to create WhatsApp connection:', error);
       throw error;
