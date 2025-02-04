@@ -22,24 +22,33 @@ export const BotCard = ({ isNew, name, id, status, whatsappStatus, onClick }: Bo
   if (isNew) {
     return (
       <Card
-        className="p-6 flex flex-col items-center justify-center gap-4 cursor-pointer hover:bg-gray-50 transition-colors border-2 border-dashed min-h-[200px]"
+        className="p-6 flex flex-col items-center justify-center gap-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-300 border-2 border-dashed min-h-[200px] group"
         onClick={onClick}
       >
-        <Plus className="w-8 h-8 text-gray-400" />
-        <p className="text-gray-600 font-medium">Create New Bot</p>
+        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+          <Plus className="w-6 h-6 text-primary" />
+        </div>
+        <p className="text-gray-600 dark:text-gray-300 font-medium">Create New Bot</p>
       </Card>
     );
   }
 
   return (
     <>
-      <Card className="p-6 flex flex-col gap-4 hover:bg-gray-50 transition-colors min-h-[200px]">
-        <div className="flex items-center justify-between">
-          <Bot className="w-8 h-8 text-primary" />
+      <Card className="p-6 flex flex-col gap-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-300 min-h-[200px] relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 -mr-16 -mt-16 bg-primary/5 rounded-full" />
+        <div className="flex items-center justify-between relative">
+          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+            <Bot className="w-6 h-6 text-primary" />
+          </div>
           <div className="flex gap-2">
             <Badge
               variant={status === "active" ? "default" : "secondary"}
-              className={status === "active" ? "bg-green-500" : ""}
+              className={`${
+                status === "active" 
+                  ? "bg-green-500 hover:bg-green-600" 
+                  : ""
+              } transition-colors`}
             >
               {status}
             </Badge>
@@ -48,25 +57,25 @@ export const BotCard = ({ isNew, name, id, status, whatsappStatus, onClick }: Bo
                 variant="outline"
                 className={`${
                   whatsappStatus === "connected"
-                    ? "border-green-500 text-green-700"
+                    ? "border-green-500 text-green-700 dark:text-green-400"
                     : whatsappStatus === "connecting"
-                    ? "border-yellow-500 text-yellow-700"
-                    : "border-gray-500 text-gray-700"
-                }`}
+                    ? "border-yellow-500 text-yellow-700 dark:text-yellow-400"
+                    : "border-gray-500 text-gray-700 dark:text-gray-400"
+                } transition-colors`}
               >
                 WhatsApp: {whatsappStatus}
               </Badge>
             )}
           </div>
         </div>
-        <div>
-          <h3 className="font-semibold text-lg">{name}</h3>
-          <p className="text-sm text-gray-500 mt-1">Click to manage this bot</p>
+        <div className="relative">
+          <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100">{name}</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Click to manage this bot</p>
         </div>
-        <div className="mt-auto pt-4 flex gap-2">
+        <div className="mt-auto pt-4 flex gap-2 relative">
           <Button 
             variant="default" 
-            className="w-full"
+            className="w-full transition-all duration-300 hover:translate-y-[-2px]"
             onClick={(e) => {
               e.stopPropagation();
               navigate(`/bot/${id}`);
@@ -76,7 +85,7 @@ export const BotCard = ({ isNew, name, id, status, whatsappStatus, onClick }: Bo
           </Button>
           <Button 
             variant="secondary" 
-            className="w-full"
+            className="w-full transition-all duration-300 hover:translate-y-[-2px]"
             onClick={(e) => {
               e.stopPropagation();
               setIsPreviewChatOpen(true);
