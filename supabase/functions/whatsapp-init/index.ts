@@ -8,19 +8,16 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Get the authorization header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       throw new Error('Missing authorization header');
     }
 
-    // Create a Supabase client using the auth header
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -31,7 +28,6 @@ serve(async (req) => {
       }
     );
 
-    // Verify the user is authenticated
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     if (authError || !user) {
       console.error('Authentication error:', authError);
@@ -44,9 +40,11 @@ serve(async (req) => {
       );
     }
 
-    console.log('Authenticated user:', user.id);
+    const { botId } = await req.json();
+    if (!botId) {
+      throw new Error('Missing botId parameter');
+    }
 
-    // Initialize WhatsApp client
     try {
       const client = new Client({});
       
@@ -61,7 +59,7 @@ serve(async (req) => {
       await client.initialize();
 
       return new Response(
-        JSON.stringify({ status: 'initializing', userId: user.id }),
+        JSON.stringify({ status: 'initializing', userId: user.id, botId }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }

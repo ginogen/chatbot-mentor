@@ -331,6 +331,44 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_connections: {
+        Row: {
+          bot_id: string | null
+          created_at: string
+          id: string
+          phone_number: string | null
+          session_data: Json | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          bot_id?: string | null
+          created_at?: string
+          id?: string
+          phone_number?: string | null
+          session_data?: Json | null
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bot_id?: string | null
+          created_at?: string
+          id?: string
+          phone_number?: string | null
+          session_data?: Json | null
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_connections_bot_id_fkey"
+            columns: ["bot_id"]
+            isOneToOne: false
+            referencedRelation: "bots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

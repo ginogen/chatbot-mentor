@@ -1,12 +1,16 @@
 import { supabase } from "@/integrations/supabase/client";
 
-type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
+export interface WhatsAppConnection {
+  id: string;
+  bot_id: string;
+  phone_number: string | null;
+  status: 'disconnected' | 'connecting' | 'connected';
+  created_at: string;
+  updated_at: string;
+}
 
 class WhatsAppService {
-  private connectionStatus: ConnectionStatus = 'disconnected';
-
-  async initialize() {
-    this.connectionStatus = 'connecting';
+  async initialize(botId: string) {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
@@ -14,10 +18,8 @@ class WhatsAppService {
         throw new Error('User must be authenticated to initialize WhatsApp');
       }
 
-      console.log('Initializing WhatsApp with authenticated session');
-      
       const response = await supabase.functions.invoke('whatsapp-init', {
-        body: { action: 'initialize' },
+        body: { action: 'initialize', botId },
         headers: {
           Authorization: `Bearer ${session.access_token}`
         }
@@ -27,27 +29,23 @@ class WhatsAppService {
         throw response.error;
       }
       
-      this.connectionStatus = 'connected';
       return response.data;
     } catch (error) {
-      this.connectionStatus = 'disconnected';
       console.error('WhatsApp initialization error:', error);
       throw error;
     }
   }
 
-  async getQRCode(): Promise<string> {
+  async getQRCode(connectionId: string): Promise<string> {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session?.access_token) {
         throw new Error('User must be authenticated to get QR code');
       }
-
-      console.log('Fetching QR code with authenticated session');
       
       const response = await supabase.functions.invoke('whatsapp-qr', {
-        body: { action: 'getQR' },
+        body: { action: 'getQR', connectionId },
         headers: {
           Authorization: `Bearer ${session.access_token}`
         }
@@ -64,8 +62,49 @@ class WhatsAppService {
     }
   }
 
-  getConnectionStatus(): ConnectionStatus {
-    return this.connectionStatus;
+  async getConnections(botId: string): Promise<WhatsAppConnection[]> {
+    try {
+      const { data, error } = await supabase
+        .from('whatsapp_connections')
+        .select('*')
+        .eq('bot_id', botId);
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Failed to get WhatsApp connections:', error);
+      throw error;
+    }
+  }
+
+  async createConnection(botId: string): Promise<WhatsAppConnection> {
+    try {
+      const { data, error } = await supabase
+        .from('whatsapp_connections')
+        .insert([{ bot_id: botId }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Failed to create WhatsApp connection:', error);
+      throw error;
+    }
+  }
+
+  async deleteConnection(connectionId: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('whatsapp_connections')
+        .delete()
+        .eq('id', connectionId);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Failed to delete WhatsApp connection:', error);
+      throw error;
+    }
   }
 }
 
