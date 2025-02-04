@@ -4,6 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 
 export function ProfileSection() {
@@ -101,12 +108,16 @@ export function ProfileSection() {
         </div>
         <div className="space-y-2">
           <Label htmlFor="role">Role</Label>
-          <Input
-            id="role"
-            value={role}
-            disabled
-            className="bg-gray-50 capitalize"
-          />
+          <Select value={role} disabled>
+            <SelectTrigger className="bg-gray-50">
+              <SelectValue placeholder="Select a role" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="admin">Admin</SelectItem>
+              <SelectItem value="supervisor">Supervisor</SelectItem>
+              <SelectItem value="agent">Agent</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <Button type="submit" disabled={isLoading}>
           {isLoading ? "Updating..." : "Update Profile"}
