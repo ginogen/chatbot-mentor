@@ -36,7 +36,7 @@ serve(async (req) => {
     if (authError || !user) {
       console.error('Authentication error:', authError);
       return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
+        JSON.stringify({ error: 'Unauthorized', details: authError?.message }),
         { 
           status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -46,24 +46,36 @@ serve(async (req) => {
 
     console.log('Authenticated user:', user.id);
 
-    const client = new Client({});
-    
-    client.on('qr', (qr) => {
-      console.log('QR RECEIVED', qr);
-    });
+    // Initialize WhatsApp client
+    try {
+      const client = new Client({});
+      
+      client.on('qr', (qr) => {
+        console.log('QR RECEIVED', qr);
+      });
 
-    client.on('ready', () => {
-      console.log('Client is ready!');
-    });
+      client.on('ready', () => {
+        console.log('Client is ready!');
+      });
 
-    await client.initialize();
+      await client.initialize();
 
-    return new Response(
-      JSON.stringify({ status: 'initializing', userId: user.id }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
-    );
+      return new Response(
+        JSON.stringify({ status: 'initializing', userId: user.id }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    } catch (whatsappError) {
+      console.error('WhatsApp initialization error:', whatsappError);
+      return new Response(
+        JSON.stringify({ error: 'WhatsApp initialization failed', details: whatsappError.message }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
   } catch (error) {
     console.error('Error:', error.message);
     return new Response(

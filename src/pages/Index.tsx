@@ -10,6 +10,7 @@ import { botService, Bot } from "@/services/botService";
 import { TrainBotView } from "@/components/Dashboard/TrainBotView";
 import { LiveChatView } from "@/components/Dashboard/LiveChatView";
 import { IntegrationsView } from "@/components/Dashboard/IntegrationsView";
+import { ConnectView } from "@/components/Dashboard/ConnectView";
 import {
   Sidebar,
   SidebarContent,
@@ -53,11 +54,9 @@ const Index = () => {
   const initializeWhatsApp = async () => {
     try {
       await whatsappService.initialize();
-      const qrCode = await whatsappService.getQRCode();
-      setQrCode(qrCode);
       toast({
         title: "WhatsApp Connection",
-        description: "Scan the QR code to connect WhatsApp",
+        description: "WhatsApp service initialized successfully",
       });
     } catch (error) {
       toast({
@@ -140,6 +139,8 @@ const Index = () => {
         return <LiveChatView botId={selectedBot} />;
       case "integrations":
         return <IntegrationsView botId={selectedBot} />;
+      case "connect":
+        return <ConnectView botId={selectedBot} />;
       default:
         return null;
     }
