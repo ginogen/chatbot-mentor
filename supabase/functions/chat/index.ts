@@ -27,10 +27,10 @@ serve(async (req) => {
       throw new Error('OpenAI API key not configured');
     }
 
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    );
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
     console.log('Fetching training data for bot:', botId);
 
@@ -46,15 +46,6 @@ serve(async (req) => {
       throw new Error(`Failed to fetch bot training data: ${trainingError.message}`);
     }
 
-    if (!trainingData) {
-      console.log('No training data found for bot:', botId);
-      // If no training data exists, use default prompts
-      trainingData = {
-        context_prompt: 'You are a helpful assistant.',
-        negative_prompt: null
-      };
-    }
-
     // Get training documents
     const { data: documents, error: documentsError } = await supabase
       .from('training_documents')
@@ -66,9 +57,13 @@ serve(async (req) => {
       throw new Error(`Failed to fetch training documents: ${documentsError.message}`);
     }
 
+    // Use default prompts if no training data exists
+    const contextPrompt = trainingData?.context_prompt || 'You are a helpful assistant.';
+    const negativePrompt = trainingData?.negative_prompt || '';
+
     const systemPrompt = `
-      ${trainingData.context_prompt}
-      ${trainingData.negative_prompt ? `\nDO NOT: ${trainingData.negative_prompt}` : ''}
+      ${contextPrompt}
+      ${negativePrompt ? `\nDO NOT: ${negativePrompt}` : ''}
       ${documents?.length ? '\nReference documents available: ' + documents.map(d => d.file_name).join(', ') : ''}
     `.trim();
 
@@ -81,7 +76,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4',
+        model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: message }

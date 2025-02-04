@@ -38,7 +38,7 @@ export type Database = {
           {
             foreignKeyName: "bot_training_bot_id_fkey"
             columns: ["bot_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "bots"
             referencedColumns: ["id"]
           },
