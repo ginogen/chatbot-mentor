@@ -1,4 +1,4 @@
-import { Bot, MessageSquare, Plug, BarChart, Calendar, CreditCard } from "lucide-react";
+import { Bot, MessageSquare, Plug, BarChart, Plug2 } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -37,36 +37,12 @@ export function BotSidebar({ currentView, onViewChange }: BotSidebarProps) {
       icon: Plug,
       value: "connect" as const,
     },
-  ];
-
-  const integrationItems = [
     {
-      title: "Cal.com",
-      icon: Calendar,
-      service: "cal",
-    },
-    {
-      title: "Calendly",
-      icon: Calendar,
-      service: "calendly",
-    },
-    {
-      title: "MercadoPago",
-      icon: CreditCard,
-      service: "mercadopago",
-    },
-    {
-      title: "PayPal",
-      icon: CreditCard,
-      service: "paypal",
+      title: "Integrations",
+      icon: Plug2,
+      value: "integrations" as const,
     },
   ];
-
-  const handleIntegrationClick = (service: string) => {
-    onViewChange("integrations");
-    // We'll implement the connection logic later
-    console.log(`Connecting to ${service}`);
-  };
 
   return (
     <Sidebar>
@@ -80,25 +56,6 @@ export function BotSidebar({ currentView, onViewChange }: BotSidebarProps) {
                   <SidebarMenuButton
                     onClick={() => onViewChange(item.value)}
                     className={currentView === item.value ? "bg-muted" : ""}
-                  >
-                    <item.icon className="w-4 h-4 mr-2" />
-                    <span>{item.title}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Integrations</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {integrationItems.map((item) => (
-                <SidebarMenuItem key={item.service}>
-                  <SidebarMenuButton
-                    onClick={() => handleIntegrationClick(item.service)}
-                    className={currentView === "integrations" ? "bg-muted" : ""}
                   >
                     <item.icon className="w-4 h-4 mr-2" />
                     <span>{item.title}</span>
