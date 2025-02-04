@@ -27,29 +27,38 @@ serve(async (req) => {
       .maybeSingle();
 
     if (integrationError || !integration?.api_key) {
+      console.error('Integration error:', integrationError);
       throw new Error('Cal.com integration not found or invalid');
     }
 
-    let endpoint = 'https://api.cal.com/v1';
+    // Base URL for Cal.com API
+    const baseUrl = 'https://api.cal.com/v1';
+    let endpoint = baseUrl;
     let method = 'GET';
     let body;
     
     switch (action) {
       case 'get_calendars':
-        endpoint += '/calendars';
+        endpoint = `${baseUrl}/calendars`;
         break;
       case 'check_availability':
-        endpoint += `/availability?date=${date}`;
-        if (integration.config?.selected_calendar) {
-          endpoint += `&calendarId=${integration.config.selected_calendar}`;
-        }
+        if (!date) throw new Error('Date is required for availability check');
+        endpoint = `${baseUrl}/availability`;
+        const queryParams = new URLSearchParams({
+          date,
+          ...(integration.config?.selected_calendar && {
+            calendarId: integration.config.selected_calendar
+          })
+        });
+        endpoint += `?${queryParams.toString()}`;
         break;
       case 'schedule':
-        endpoint += '/bookings';
+        if (!date || !time) throw new Error('Date and time are required for scheduling');
+        endpoint = `${baseUrl}/bookings`;
         method = 'POST';
         body = JSON.stringify({
           start: `${date}T${time}`,
-          end: `${date}T${time}`, // You might want to add duration
+          end: `${date}T${time}:00.000Z`, // Adding proper time format
           title: "Meeting scheduled via bot",
           calendarId: integration.config?.selected_calendar,
         });
@@ -69,23 +78,36 @@ serve(async (req) => {
       body: method === 'POST' ? body : undefined,
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Cal.com API error:', errorText);
-      throw new Error(`Cal.com API error: ${response.statusText}`);
+    const responseText = await response.text();
+    let responseData;
+    
+    try {
+      responseData = JSON.parse(responseText);
+    } catch (e) {
+      console.error('Failed to parse response:', responseText);
+      throw new Error('Invalid response from Cal.com API');
     }
 
-    const data = await response.json();
-    console.log('Cal.com API response:', data);
+    if (!response.ok) {
+      console.error('Cal.com API error response:', responseData);
+      throw new Error(`Cal.com API error: ${responseData.message || response.statusText}`);
+    }
+
+    console.log('Cal.com API response:', responseData);
     
-    return new Response(JSON.stringify(data), {
+    return new Response(JSON.stringify(responseData), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
     console.error('Error in cal-api function:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({ 
+        error: error.message,
+        details: error instanceof Error ? error.stack : undefined
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    );
   }
 });
