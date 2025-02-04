@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,9 +8,45 @@ import { supabase } from "@/integrations/supabase/client";
 
 export function ProfileSection() {
   const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    loadUserData();
+  }, []);
+
+  const loadUserData = async () => {
+    try {
+      // Get user email
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email) {
+        setEmail(user.email);
+      }
+
+      // Get user profile
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("first_name")
+        .single();
+      
+      if (profile?.first_name) {
+        setFirstName(profile.first_name);
+      }
+
+      // Get user role
+      const { data: roleData } = await supabase.rpc('get_highest_role', {
+        user_id: user?.id
+      });
+      
+      if (roleData) {
+        setRole(roleData);
+      }
+    } catch (error: any) {
+      console.error('Error loading user data:', error);
+    }
+  };
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,7 +57,6 @@ export function ProfileSection() {
         .from("profiles")
         .update({
           first_name: firstName,
-          last_name: lastName,
         })
         .eq("id", (await supabase.auth.getUser()).data.user?.id);
 
@@ -56,12 +91,21 @@ export function ProfileSection() {
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="lastName">Last Name</Label>
+          <Label htmlFor="email">Email</Label>
           <Input
-            id="lastName"
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
-            placeholder="Enter your last name"
+            id="email"
+            value={email}
+            disabled
+            className="bg-gray-50"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="role">Role</Label>
+          <Input
+            id="role"
+            value={role}
+            disabled
+            className="bg-gray-50 capitalize"
           />
         </div>
         <Button type="submit" disabled={isLoading}>
