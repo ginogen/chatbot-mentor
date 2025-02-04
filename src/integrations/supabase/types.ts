@@ -9,6 +9,44 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      bot_integrations: {
+        Row: {
+          bot_id: string | null
+          created_at: string
+          credentials: Json
+          id: string
+          service_name: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          bot_id?: string | null
+          created_at?: string
+          credentials?: Json
+          id?: string
+          service_name: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          bot_id?: string | null
+          created_at?: string
+          credentials?: Json
+          id?: string
+          service_name?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bot_integrations_bot_id_fkey"
+            columns: ["bot_id"]
+            isOneToOne: false
+            referencedRelation: "bots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bot_training: {
         Row: {
           bot_id: string | null
