@@ -1,11 +1,10 @@
 import React from "react";
-import { Bot, MessageSquare, Plug, BarChart, Plug2, ChevronDown, ChevronUp, Settings } from "lucide-react";
+import { Bot, MessageSquare, Plug, Settings, LogOut, User } from "lucide-react";
 import { CreateBotModal } from "@/components/Dashboard/CreateBotModal";
 import { useToast } from "@/components/ui/use-toast";
 import { whatsappService } from "@/services/whatsappService";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LogOut } from "lucide-react";
 import { botService, Bot as BotType } from "@/services/botService";
 import { TrainBotView } from "@/components/Dashboard/TrainBotView";
 import { LiveChatView } from "@/components/Dashboard/LiveChatView";
@@ -32,12 +31,26 @@ const Index = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
   const [selectedView, setSelectedView] = React.useState<string>("train");
   const [isTrainMenuOpen, setIsTrainMenuOpen] = React.useState(false);
+  const [userProfile, setUserProfile] = React.useState<any>(null);
   const { toast } = useToast();
 
   React.useEffect(() => {
     loadBots();
     initializeWhatsApp();
+    loadUserProfile();
   }, []);
+
+  const loadUserProfile = async () => {
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .single();
+      setUserProfile(profile);
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+    }
+  };
 
   const loadBots = async () => {
     try {
@@ -103,7 +116,6 @@ const Index = () => {
   const menuItems = [
     { id: "chat", label: "Live Chat", icon: MessageSquare },
     { id: "connect", label: "Connect", icon: Plug },
-    { id: "integrations", label: "Integrations", icon: Plug2 },
     { id: "settings", label: "Settings", icon: Settings },
   ];
 
@@ -150,11 +162,6 @@ const Index = () => {
                     <Bot className="w-4 h-4 mr-2" />
                     <span>Train Bot</span>
                   </div>
-                  {isTrainMenuOpen ? (
-                    <ChevronUp className="w-4 h-4" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4" />
-                  )}
                 </SidebarMenuButton>
                 {isTrainMenuOpen && (
                   <SidebarMenuSub>
@@ -198,14 +205,18 @@ const Index = () => {
           </SidebarContent>
         </Sidebar>
 
-        <SidebarInset>
-          <div className="p-6">
-            <div className="flex justify-end mb-6">
-              <Button variant="outline" size="sm" onClick={handleLogout}>
-                <LogOut className="w-4 h-4 mr-2" />
-                Sign Out
-              </Button>
+        <SidebarInset className="flex flex-col">
+          <div className="w-full bg-white dark:bg-gray-800 border-b border-border p-4 flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <User className="w-5 h-5" />
+              <span>{userProfile?.first_name || userProfile?.email || 'User'}</span>
             </div>
+            <Button variant="outline" size="sm" onClick={handleLogout}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign Out
+            </Button>
+          </div>
+          <div className="flex-1 p-6 overflow-auto">
             {renderMainContent()}
           </div>
         </SidebarInset>
