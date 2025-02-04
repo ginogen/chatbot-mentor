@@ -1,6 +1,5 @@
 import React from "react";
-import { Bot, MessageSquare, Plug, BarChart, Plug2, ChevronDown, ChevronUp } from "lucide-react";
-import { BotCard } from "@/components/Dashboard/BotCard";
+import { Bot, MessageSquare, Plug, BarChart, Plug2, ChevronDown, ChevronUp, Settings } from "lucide-react";
 import { CreateBotModal } from "@/components/Dashboard/CreateBotModal";
 import { useToast } from "@/components/ui/use-toast";
 import { whatsappService } from "@/services/whatsappService";
@@ -12,6 +11,7 @@ import { TrainBotView } from "@/components/Dashboard/TrainBotView";
 import { LiveChatView } from "@/components/Dashboard/LiveChatView";
 import { IntegrationsView } from "@/components/Dashboard/IntegrationsView";
 import { ConnectView } from "@/components/Dashboard/ConnectView";
+import { SettingsView } from "@/components/Dashboard/SettingsView";
 import {
   Sidebar,
   SidebarContent,
@@ -104,10 +104,11 @@ const Index = () => {
     { id: "chat", label: "Live Chat", icon: MessageSquare },
     { id: "connect", label: "Connect", icon: Plug },
     { id: "integrations", label: "Integrations", icon: Plug2 },
+    { id: "settings", label: "Settings", icon: Settings },
   ];
 
   const renderMainContent = () => {
-    if (!selectedBot) {
+    if (!selectedBot && selectedView !== "settings") {
       return (
         <div className="flex items-center justify-center h-full">
           <p className="text-gray-500">Select a bot to get started</p>
@@ -117,13 +118,15 @@ const Index = () => {
 
     switch (selectedView) {
       case "train":
-        return <TrainBotView botId={selectedBot} />;
+        return <TrainBotView botId={selectedBot!} />;
       case "chat":
-        return <LiveChatView botId={selectedBot} />;
+        return <LiveChatView botId={selectedBot!} />;
       case "integrations":
-        return <IntegrationsView botId={selectedBot} />;
+        return <IntegrationsView botId={selectedBot!} />;
       case "connect":
-        return <ConnectView botId={selectedBot} />;
+        return <ConnectView botId={selectedBot!} />;
+      case "settings":
+        return <SettingsView />;
       default:
         return null;
     }
@@ -138,7 +141,6 @@ const Index = () => {
           </SidebarHeader>
           <SidebarContent>
             <SidebarMenu>
-              {/* Train Bot with submenu */}
               <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={() => setIsTrainMenuOpen(!isTrainMenuOpen)}
@@ -181,7 +183,6 @@ const Index = () => {
                 )}
               </SidebarMenuItem>
 
-              {/* Other menu items */}
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.id}>
                   <SidebarMenuButton
@@ -197,7 +198,6 @@ const Index = () => {
           </SidebarContent>
         </Sidebar>
 
-        {/* Main Content */}
         <SidebarInset>
           <div className="p-6">
             <div className="flex justify-end mb-6">
