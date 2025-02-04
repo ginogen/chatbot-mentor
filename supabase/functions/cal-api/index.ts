@@ -102,14 +102,21 @@ serve(async (req) => {
     // Extract event types from the response structure
     if (action === 'get_calendars' && responseData.data?.eventTypeGroups) {
       const eventTypes = responseData.data.eventTypeGroups
-        .flatMap((group: any) => group.eventTypes || [])
-        .map((eventType: any) => ({
-          id: eventType.id.toString(),
-          name: eventType.title,
-          description: eventType.description,
-          length: eventType.length,
-        }));
+        .flatMap((group: any) => {
+          if (!group.eventTypes) return [];
+          return group.eventTypes.map((eventType: any) => ({
+            id: eventType.id.toString(),
+            name: eventType.title,
+            description: eventType.description,
+            length: eventType.length,
+            slug: eventType.slug,
+            hidden: eventType.hidden,
+            bookingFields: eventType.bookingFields,
+          }));
+        })
+        .filter((eventType: any) => !eventType.hidden);
       
+      console.log('Processed event types:', eventTypes);
       responseData = { eventTypes };
     }
     
