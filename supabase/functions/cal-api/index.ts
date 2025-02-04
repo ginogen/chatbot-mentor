@@ -10,9 +10,11 @@ const corsHeaders = {
 
 const parseNaturalDate = (dateStr: string): Date | null => {
   console.log('Attempting to parse date:', dateStr);
-  if (!dateStr) {
-    console.log('Date string is empty or undefined');
-    return null;
+  
+  // If no specific date is mentioned, default to today
+  if (!dateStr || dateStr.includes('reunión') || dateStr.includes('disponible')) {
+    console.log('No specific date provided, defaulting to today');
+    return new Date();
   }
 
   const now = new Date();
@@ -27,7 +29,6 @@ const parseNaturalDate = (dateStr: string): Date | null => {
       let hours = parseInt(timeMatch[1]);
       if (dateStr.includes('pm') || dateStr.includes('p.m.')) hours = hours === 12 ? 12 : hours + 12;
       if ((dateStr.includes('am') || dateStr.includes('a.m.')) && hours === 12) hours = 0;
-      console.log('Setting time for tomorrow to:', hours);
       return setHours(setMinutes(tomorrow, 0), hours);
     }
     return tomorrow;
@@ -41,10 +42,9 @@ const parseNaturalDate = (dateStr: string): Date | null => {
       let hours = parseInt(timeMatch[1]);
       if (dateStr.includes('pm') || dateStr.includes('p.m.')) hours = hours === 12 ? 12 : hours + 12;
       if ((dateStr.includes('am') || dateStr.includes('a.m.')) && hours === 12) hours = 0;
-      console.log('Setting time for today to:', hours);
       return setHours(setMinutes(now, 0), hours);
     }
-    return setHours(setMinutes(now, 0), now.getHours());
+    return now;
   }
 
   // Handle weekdays
@@ -129,8 +129,8 @@ const parseNaturalDate = (dateStr: string): Date | null => {
     return setHours(setMinutes(date, 0), 9); // Default to 9 AM if no time specified
   }
 
-  console.log('No matching date pattern found');
-  return null;
+  console.log('Using default date (today)');
+  return now;
 };
 
 serve(async (req) => {
@@ -171,8 +171,6 @@ serve(async (req) => {
         break;
 
       case 'check_availability': {
-        if (!rawDate) throw new Error('Date is required for availability check');
-        
         const parsedDate = parseNaturalDate(rawDate);
         if (!parsedDate) {
           console.error('Failed to parse date:', rawDate);
@@ -286,8 +284,9 @@ serve(async (req) => {
         }
       }
 
+      const parsedDate = parseNaturalDate(rawDate);
       responseData = { 
-        date: format(parseNaturalDate(rawDate)!, 'yyyy-MM-dd', { locale: es }),
+        date: format(parsedDate!, 'yyyy-MM-dd', { locale: es }),
         availableSlots 
       };
     }
