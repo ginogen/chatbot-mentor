@@ -8,6 +8,8 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { MainSidebar } from "@/components/Layout/MainSidebar";
 import { TopBar } from "@/components/Layout/TopBar";
 import { MainContent } from "@/components/Layout/MainContent";
+import { PreviewChat } from "@/components/Dashboard/PreviewChat";
+import { Eye } from "lucide-react";
 
 const Index = () => {
   const [bots, setBots] = React.useState<BotType[]>([]);
@@ -17,6 +19,7 @@ const Index = () => {
   const [isTrainMenuOpen, setIsTrainMenuOpen] = React.useState(false);
   const [userProfile, setUserProfile] = React.useState<any>(null);
   const [userEmail, setUserEmail] = React.useState<string | null>(null);
+  const [isPreviewChatOpen, setIsPreviewChatOpen] = React.useState(false);
   const { toast } = useToast();
 
   React.useEffect(() => {
@@ -139,6 +142,24 @@ const Index = () => {
             />
           </div>
         </SidebarInset>
+
+        {/* Floating Preview Button - Always visible */}
+        <button
+          onClick={() => setIsPreviewChatOpen(true)}
+          className="fixed bottom-8 right-8 w-14 h-14 rounded-full bg-primary shadow-lg flex items-center justify-center transition-transform hover:scale-110 z-50 hover:bg-primary-light"
+          title="Preview Chat"
+        >
+          <Eye className="w-6 h-6 text-primary-foreground" />
+        </button>
+
+        {selectedBot && (
+          <PreviewChat
+            open={isPreviewChatOpen}
+            onOpenChange={setIsPreviewChatOpen}
+            botId={selectedBot}
+            botName={bots.find(bot => bot.id === selectedBot)?.name || "Bot Preview"}
+          />
+        )}
 
         <CreateBotModal
           open={isCreateModalOpen}
