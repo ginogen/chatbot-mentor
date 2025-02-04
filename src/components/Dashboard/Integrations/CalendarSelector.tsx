@@ -11,9 +11,11 @@ import {
 import { integrationService } from "@/services/integrationService";
 import { supabase } from "@/integrations/supabase/client";
 
-interface Calendar {
+interface EventType {
   id: string;
   name: string;
+  description?: string;
+  length?: number;
 }
 
 interface CalendarSelectorProps {
@@ -23,19 +25,19 @@ interface CalendarSelectorProps {
 }
 
 export function CalendarSelector({ botId, integration, onUpdate }: CalendarSelectorProps) {
-  const [calendars, setCalendars] = useState<Calendar[]>([]);
-  const [selectedCalendar, setSelectedCalendar] = useState<string>("");
+  const [eventTypes, setEventTypes] = useState<EventType[]>([]);
+  const [selectedEventType, setSelectedEventType] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    loadCalendars();
+    loadEventTypes();
     if (integration.config?.selected_calendar) {
-      setSelectedCalendar(integration.config.selected_calendar);
+      setSelectedEventType(integration.config.selected_calendar);
     }
   }, [integration]);
 
-  const loadCalendars = async () => {
+  const loadEventTypes = async () => {
     try {
       const { data, error } = await supabase.functions.invoke('cal-api', {
         body: { action: 'get_calendars', botId },
@@ -43,21 +45,17 @@ export function CalendarSelector({ botId, integration, onUpdate }: CalendarSelec
       
       if (error) throw error;
       
-      // Check if data exists and has the expected structure
       if (data?.eventTypes && Array.isArray(data.eventTypes)) {
-        setCalendars(data.eventTypes.map((cal: any) => ({
-          id: cal.id.toString(),
-          name: cal.title || cal.name,
-        })));
+        setEventTypes(data.eventTypes);
       } else {
         console.error('Unexpected response format:', data);
         throw new Error('Invalid response format from Cal.com API');
       }
     } catch (error) {
-      console.error("Error loading calendars:", error);
+      console.error("Error loading event types:", error);
       toast({
         title: "Error",
-        description: "Failed to load calendars from Cal.com",
+        description: "Failed to load event types from Cal.com",
         variant: "destructive",
       });
     } finally {
@@ -65,51 +63,51 @@ export function CalendarSelector({ botId, integration, onUpdate }: CalendarSelec
     }
   };
 
-  const handleCalendarSelect = async (calendarId: string) => {
+  const handleEventTypeSelect = async (eventTypeId: string) => {
     try {
-      const selectedCal = calendars.find(cal => cal.id === calendarId);
-      if (!selectedCal) return;
+      const selectedType = eventTypes.find(type => type.id === eventTypeId);
+      if (!selectedType) return;
 
       await integrationService.updateIntegrationConfig(botId, "cal", {
-        selected_calendar: calendarId,
-        calendar_name: selectedCal.name,
+        selected_calendar: eventTypeId,
+        calendar_name: selectedType.name,
       });
       
-      setSelectedCalendar(calendarId);
+      setSelectedEventType(eventTypeId);
       onUpdate();
       
       toast({
         title: "Success",
-        description: "Calendar selection updated successfully",
+        description: "Event type selection updated successfully",
       });
     } catch (error) {
-      console.error("Error updating calendar selection:", error);
+      console.error("Error updating event type selection:", error);
       toast({
         title: "Error",
-        description: "Failed to update calendar selection",
+        description: "Failed to update event type selection",
         variant: "destructive",
       });
     }
   };
 
   if (loading) {
-    return <div>Loading calendars...</div>;
+    return <div>Loading event types...</div>;
   }
 
   return (
     <div className="space-y-4">
-      <h4 className="text-sm font-medium">Select Calendar</h4>
+      <h4 className="text-sm font-medium">Select Event Type</h4>
       <Select
-        value={selectedCalendar}
-        onValueChange={handleCalendarSelect}
+        value={selectedEventType}
+        onValueChange={handleEventTypeSelect}
       >
         <SelectTrigger>
-          <SelectValue placeholder="Select a calendar" />
+          <SelectValue placeholder="Select an event type" />
         </SelectTrigger>
         <SelectContent>
-          {calendars.map((calendar) => (
-            <SelectItem key={calendar.id} value={calendar.id}>
-              {calendar.name}
+          {eventTypes.map((type) => (
+            <SelectItem key={type.id} value={type.id}>
+              {type.name} {type.length && `(${type.length} min)`}
             </SelectItem>
           ))}
         </SelectContent>

@@ -40,7 +40,7 @@ serve(async (req) => {
     switch (action) {
       case 'get_calendars':
         endpoint = `${baseUrl}/event-types`;
-        console.log('Fetching calendars from:', endpoint);
+        console.log('Fetching event types from:', endpoint);
         break;
       case 'check_availability':
         if (!date) throw new Error('Date is required for availability check');
@@ -88,6 +88,7 @@ serve(async (req) => {
     
     try {
       responseData = JSON.parse(responseText);
+      console.log('Cal.com API response:', responseData);
     } catch (e) {
       console.error('Failed to parse response:', responseText);
       throw new Error('Invalid response from Cal.com API');
@@ -98,7 +99,19 @@ serve(async (req) => {
       throw new Error(`Cal.com API error: ${responseData.message || response.statusText}`);
     }
 
-    console.log('Cal.com API response:', responseData);
+    // Extract event types from the response structure
+    if (action === 'get_calendars' && responseData.data?.eventTypeGroups) {
+      const eventTypes = responseData.data.eventTypeGroups
+        .flatMap((group: any) => group.eventTypes || [])
+        .map((eventType: any) => ({
+          id: eventType.id.toString(),
+          name: eventType.title,
+          description: eventType.description,
+          length: eventType.length,
+        }));
+      
+      responseData = { eventTypes };
+    }
     
     return new Response(JSON.stringify(responseData), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
