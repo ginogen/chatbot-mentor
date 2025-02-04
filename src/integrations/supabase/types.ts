@@ -150,27 +150,39 @@ export type Database = {
       training_documents: {
         Row: {
           bot_id: string | null
+          content: string | null
           created_at: string
+          error_message: string | null
           file_name: string
           file_path: string
           file_type: string
           id: string
+          processed_at: string | null
+          processed_status: string
         }
         Insert: {
           bot_id?: string | null
+          content?: string | null
           created_at?: string
+          error_message?: string | null
           file_name: string
           file_path: string
           file_type: string
           id?: string
+          processed_at?: string | null
+          processed_status?: string
         }
         Update: {
           bot_id?: string | null
+          content?: string | null
           created_at?: string
+          error_message?: string | null
           file_name?: string
           file_path?: string
           file_type?: string
           id?: string
+          processed_at?: string | null
+          processed_status?: string
         }
         Relationships: [
           {

@@ -33,7 +33,7 @@ export function TrainBotView({ botId }: TrainBotViewProps) {
     },
   });
 
-  const { data: trainingDocs } = useQuery({
+  const { data: trainingDocs, refetch: refetchDocs } = useQuery({
     queryKey: ["trainingDocs", botId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -63,6 +63,23 @@ export function TrainBotView({ botId }: TrainBotViewProps) {
 
   const removeFile = (index: number) => {
     setFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const processDocument = async (documentId: string) => {
+    try {
+      const { error } = await supabase.functions.invoke('process-document', {
+        body: { documentId }
+      });
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error processing document:', error);
+      toast({
+        title: "Error",
+        description: "Failed to process document. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSubmit = async () => {
@@ -118,16 +135,21 @@ export function TrainBotView({ botId }: TrainBotViewProps) {
 
         if (uploadError) throw uploadError;
 
-        const { error: docError } = await supabase
+        const { data: docData, error: docError } = await supabase
           .from("training_documents")
           .insert({
             bot_id: botId,
             file_name: file.name,
             file_path: filePath,
             file_type: file.type,
-          });
+          })
+          .select()
+          .single();
 
         if (docError) throw docError;
+
+        // Trigger document processing
+        await processDocument(docData.id);
       }
 
       toast({
@@ -136,6 +158,7 @@ export function TrainBotView({ botId }: TrainBotViewProps) {
       });
 
       setFiles([]);
+      refetchDocs();
     } catch (error) {
       console.error("Error saving training configuration:", error);
       toast({
