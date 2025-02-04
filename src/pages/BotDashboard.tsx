@@ -1,5 +1,5 @@
-import { useState } from "react";
 import { useParams } from "react-router-dom";
+import { useState } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { BotSidebar } from "@/components/Dashboard/BotSidebar";
 import { TrainBotView } from "@/components/Dashboard/TrainBotView";
@@ -10,7 +10,7 @@ import { Eye } from "lucide-react";
 
 const BotDashboard = () => {
   const { botId } = useParams();
-  const [activeTab, setActiveTab] = useState("train");
+  const [activeTab, setActiveTab] = useState<"metrics" | "train" | "chat" | "connect">("train");
   const [isPreviewChatOpen, setIsPreviewChatOpen] = useState(false);
 
   if (!botId) return null;
