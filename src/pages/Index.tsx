@@ -5,18 +5,28 @@ import { useToast } from "@/components/ui/use-toast";
 import { whatsappService } from "@/services/whatsappService";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LogOut } from "lucide-react";
+import { MessageSquare, Wrench, Plug2, Settings, LogOut } from "lucide-react";
 import { botService, Bot } from "@/services/botService";
 import { TrainBotView } from "@/components/Dashboard/TrainBotView";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LiveChatView } from "@/components/Dashboard/LiveChatView";
 import { IntegrationsView } from "@/components/Dashboard/IntegrationsView";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarInset,
+} from "@/components/ui/sidebar";
 
 const Index = () => {
   const [bots, setBots] = useState<Bot[]>([]);
   const [selectedBot, setSelectedBot] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [selectedView, setSelectedView] = useState<string>("train");
+  const [showBotsSidebar, setShowBotsSidebar] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -107,67 +117,109 @@ const Index = () => {
     }
   };
 
+  const menuItems = [
+    { id: "chat", label: "Live Chat", icon: MessageSquare },
+    { id: "train", label: "Train Bot", icon: Wrench },
+    { id: "integrations", label: "Integrations", icon: Plug2 },
+    { id: "settings", label: "Settings", icon: Settings },
+  ];
+
+  const renderMainContent = () => {
+    if (!selectedBot) {
+      return (
+        <div className="flex items-center justify-center h-full">
+          <p className="text-gray-500">Select a bot to get started</p>
+        </div>
+      );
+    }
+
+    switch (selectedView) {
+      case "train":
+        return <TrainBotView botId={selectedBot} />;
+      case "chat":
+        return <LiveChatView botId={selectedBot} />;
+      case "integrations":
+        return <IntegrationsView botId={selectedBot} />;
+      default:
+        return null;
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="container py-8">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">WhatsApp Bot Creator</h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-2">
-              Create and manage your WhatsApp chatbots easily
-            </p>
-          </div>
-          <Button variant="outline" onClick={handleLogout}>
-            <LogOut className="w-4 h-4 mr-2" />
-            Sign Out
-          </Button>
-        </div>
+    <SidebarProvider defaultOpen>
+      <div className="flex min-h-screen w-full bg-gray-50 dark:bg-gray-900">
+        {/* Main Sidebar */}
+        <Sidebar>
+          <SidebarHeader className="border-b border-border p-4">
+            <h2 className="text-lg font-semibold">WhatsApp Bot Creator</h2>
+          </SidebarHeader>
+          <SidebarContent>
+            <SidebarMenu>
+              {menuItems.map((item) => (
+                <SidebarMenuItem key={item.id}>
+                  <SidebarMenuButton
+                    onClick={() => {
+                      setSelectedView(item.id);
+                      if (item.id === "train") {
+                        setShowBotsSidebar(true);
+                      }
+                    }}
+                    isActive={selectedView === item.id}
+                  >
+                    <item.icon className="w-4 h-4" />
+                    <span>{item.label}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarContent>
+        </Sidebar>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          {/* Sidebar with bots */}
-          <div className="space-y-4">
-            <BotCard isNew onClick={() => setIsCreateModalOpen(true)} />
-            {bots.map((bot) => (
-              <BotCard
-                key={bot.id}
-                id={bot.id}
-                name={bot.name}
-                status={bot.status}
-                whatsappStatus={bot.whatsapp_status}
-                onClick={() => setSelectedBot(bot.id)}
-                isSelected={selectedBot === bot.id}
-              />
-            ))}
-          </div>
-
-          {/* Main content area */}
-          <div className="md:col-span-3">
-            {selectedBot ? (
-              <Tabs defaultValue="train" className="w-full">
-                <TabsList className="w-full">
-                  <TabsTrigger value="train">Training</TabsTrigger>
-                  <TabsTrigger value="chat">Live Chat</TabsTrigger>
-                  <TabsTrigger value="integrations">Integrations</TabsTrigger>
-                </TabsList>
-                <TabsContent value="train">
-                  <TrainBotView botId={selectedBot} />
-                </TabsContent>
-                <TabsContent value="chat">
-                  <LiveChatView botId={selectedBot} />
-                </TabsContent>
-                <TabsContent value="integrations">
-                  <IntegrationsView botId={selectedBot} />
-                </TabsContent>
-              </Tabs>
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-gray-600 dark:text-gray-400">
-                  Select a bot or create a new one to get started
-                </p>
+        {/* Bots Sidebar */}
+        {showBotsSidebar && (
+          <Sidebar variant="floating" className="w-72 border-r border-border">
+            <SidebarHeader className="border-b border-border p-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-medium">Your Bots</h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsCreateModalOpen(true)}
+                >
+                  Add Bot
+                </Button>
               </div>
-            )}
+            </SidebarHeader>
+            <SidebarContent className="p-4">
+              <div className="space-y-3">
+                {bots.map((bot) => (
+                  <BotCard
+                    key={bot.id}
+                    id={bot.id}
+                    name={bot.name}
+                    status={bot.status}
+                    whatsappStatus={bot.whatsapp_status}
+                    onClick={() => setSelectedBot(bot.id)}
+                    isSelected={selectedBot === bot.id}
+                  />
+                ))}
+              </div>
+            </SidebarContent>
+          </Sidebar>
+        )}
+
+        {/* Main Content */}
+        <SidebarInset>
+          <div className="p-6">
+            <div className="flex justify-end mb-6">
+              <Button variant="outline" size="sm" onClick={handleLogout}>
+                <LogOut className="w-4 h-4 mr-2" />
+                Sign Out
+              </Button>
+            </div>
+            {renderMainContent()}
           </div>
-        </div>
+        </SidebarInset>
 
         <CreateBotModal
           open={isCreateModalOpen}
@@ -175,7 +227,7 @@ const Index = () => {
           onCreateBot={handleCreateBot}
         />
       </div>
-    </div>
+    </SidebarProvider>
   );
 };
 
