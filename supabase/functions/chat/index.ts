@@ -32,16 +32,27 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
+    console.log('Fetching training data for bot:', botId);
+
     // Get bot training data
     const { data: trainingData, error: trainingError } = await supabase
       .from('bot_training')
       .select('*')
       .eq('bot_id', botId)
-      .single();
+      .maybeSingle();
 
     if (trainingError) {
       console.error('Error fetching training data:', trainingError);
-      throw new Error('Failed to fetch bot training data');
+      throw new Error(`Failed to fetch bot training data: ${trainingError.message}`);
+    }
+
+    if (!trainingData) {
+      console.log('No training data found for bot:', botId);
+      // If no training data exists, use default prompts
+      trainingData = {
+        context_prompt: 'You are a helpful assistant.',
+        negative_prompt: null
+      };
     }
 
     // Get training documents
@@ -52,12 +63,12 @@ serve(async (req) => {
 
     if (documentsError) {
       console.error('Error fetching documents:', documentsError);
-      throw new Error('Failed to fetch training documents');
+      throw new Error(`Failed to fetch training documents: ${documentsError.message}`);
     }
 
     const systemPrompt = `
-      ${trainingData?.context_prompt || 'You are a helpful assistant.'}
-      ${trainingData?.negative_prompt ? `\nDO NOT: ${trainingData.negative_prompt}` : ''}
+      ${trainingData.context_prompt}
+      ${trainingData.negative_prompt ? `\nDO NOT: ${trainingData.negative_prompt}` : ''}
       ${documents?.length ? '\nReference documents available: ' + documents.map(d => d.file_name).join(', ') : ''}
     `.trim();
 
@@ -70,7 +81,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: message }
