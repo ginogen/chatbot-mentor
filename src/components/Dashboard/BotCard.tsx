@@ -42,7 +42,7 @@ export const BotCard = ({ isNew, name, id, status, whatsappStatus, onClick }: Bo
             e.stopPropagation();
             setIsPreviewChatOpen(true);
           }}
-          className="absolute top-4 right-4 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-primary/20 z-10"
+          className="absolute top-4 right-4 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center transition-all duration-300 hover:bg-primary/20 hover:scale-110 z-10"
           title="Preview Chat"
         >
           <Eye className="w-5 h-5 text-primary" />
