@@ -187,6 +187,7 @@ export function TrainBotView({ botId }: TrainBotViewProps) {
           setTemperature={setTemperature}
           onFileChange={handleFileChange}
           onRemoveFile={removeFile}
+          onRefetchDocs={refetchDocs}
         />
         
         <Button 

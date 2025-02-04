@@ -1,11 +1,14 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, X, FileText } from "lucide-react";
+import { Upload, X, FileText, Trash2 } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Document {
   id?: string;
   file_name: string;
+  file_path?: string;
 }
 
 interface DocumentUploaderProps {
@@ -13,6 +16,7 @@ interface DocumentUploaderProps {
   trainingDocs?: Document[];
   onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onRemoveFile: (index: number) => void;
+  onRefetch?: () => void;
 }
 
 export function DocumentUploader({
@@ -20,7 +24,48 @@ export function DocumentUploader({
   trainingDocs,
   onFileChange,
   onRemoveFile,
+  onRefetch,
 }: DocumentUploaderProps) {
+  const { toast } = useToast();
+
+  const handleDeleteDocument = async (doc: Document) => {
+    try {
+      if (!doc.id || !doc.file_path) return;
+
+      // Delete from storage
+      const { error: storageError } = await supabase.storage
+        .from("training_docs")
+        .remove([doc.file_path]);
+
+      if (storageError) throw storageError;
+
+      // Delete from database
+      const { error: dbError } = await supabase
+        .from("training_documents")
+        .delete()
+        .eq("id", doc.id);
+
+      if (dbError) throw dbError;
+
+      toast({
+        title: "Success",
+        description: "Document deleted successfully",
+      });
+
+      // Refresh the documents list
+      if (onRefetch) {
+        onRefetch();
+      }
+    } catch (error) {
+      console.error("Error deleting document:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete document",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="space-y-4">
@@ -63,6 +108,14 @@ export function DocumentUploader({
                     {doc.file_name}
                   </span>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleDeleteDocument(doc)}
+                  className="hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </div>
             ))}
           </div>

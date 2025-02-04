@@ -15,6 +15,7 @@ interface TrainingTabsProps {
   setTemperature: (value: string) => void;
   onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onRemoveFile: (index: number) => void;
+  onRefetchDocs?: () => void;
 }
 
 export function TrainingTabs({
@@ -28,6 +29,7 @@ export function TrainingTabs({
   setTemperature,
   onFileChange,
   onRemoveFile,
+  onRefetchDocs,
 }: TrainingTabsProps) {
   return (
     <Tabs defaultValue="settings" className="w-full">
@@ -59,6 +61,7 @@ export function TrainingTabs({
           trainingDocs={trainingDocs}
           onFileChange={onFileChange}
           onRemoveFile={onRemoveFile}
+          onRefetch={onRefetchDocs}
         />
       </TabsContent>
     </Tabs>
