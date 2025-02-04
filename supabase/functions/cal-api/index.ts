@@ -10,25 +10,44 @@ const corsHeaders = {
 
 const parseNaturalDate = (dateStr: string): Date | null => {
   console.log('Attempting to parse date:', dateStr);
+  if (!dateStr) {
+    console.log('Date string is empty or undefined');
+    return null;
+  }
+
   const now = new Date();
   dateStr = dateStr.toLowerCase().trim();
 
-  // Handle "mañana X am/pm"
+  // Handle "mañana" with optional time
   if (dateStr.includes('mañana')) {
     console.log('Detected "mañana" pattern');
     const tomorrow = addDays(now, 1);
-    const timeMatch = dateStr.match(/(\d{1,2})(?:\s*)?(?:am|pm)/i);
+    const timeMatch = dateStr.match(/(\d{1,2})(?:\s*)?(?:am|pm|a\.m\.|p\.m\.)/i);
     if (timeMatch) {
       let hours = parseInt(timeMatch[1]);
-      if (dateStr.includes('pm') && hours < 12) hours += 12;
-      if (dateStr.includes('am') && hours === 12) hours = 0;
-      console.log('Setting time to:', hours);
+      if (dateStr.includes('pm') || dateStr.includes('p.m.')) hours = hours === 12 ? 12 : hours + 12;
+      if ((dateStr.includes('am') || dateStr.includes('a.m.')) && hours === 12) hours = 0;
+      console.log('Setting time for tomorrow to:', hours);
       return setHours(setMinutes(tomorrow, 0), hours);
     }
     return tomorrow;
   }
 
-  // Handle weekdays (both with and without "próximo")
+  // Handle "hoy" with optional time
+  if (dateStr.includes('hoy')) {
+    console.log('Detected "hoy" pattern');
+    const timeMatch = dateStr.match(/(\d{1,2})(?:\s*)?(?:am|pm|a\.m\.|p\.m\.)/i);
+    if (timeMatch) {
+      let hours = parseInt(timeMatch[1]);
+      if (dateStr.includes('pm') || dateStr.includes('p.m.')) hours = hours === 12 ? 12 : hours + 12;
+      if ((dateStr.includes('am') || dateStr.includes('a.m.')) && hours === 12) hours = 0;
+      console.log('Setting time for today to:', hours);
+      return setHours(setMinutes(now, 0), hours);
+    }
+    return setHours(setMinutes(now, 0), now.getHours());
+  }
+
+  // Handle weekdays
   const weekdays = {
     'lunes': 1, 'martes': 2, 'miércoles': 3, 'miercoles': 3,
     'jueves': 4, 'viernes': 5, 'sábado': 6, 'sabado': 6, 'domingo': 0
@@ -40,20 +59,19 @@ const parseNaturalDate = (dateStr: string): Date | null => {
       let targetDate = now;
       const isNextWeek = dateStr.includes('próximo') || dateStr.includes('proximo');
       
-      // Find next occurrence of this weekday
       while (targetDate.getDay() !== value || (isNextWeek && targetDate <= addDays(now, 1))) {
         targetDate = addDays(targetDate, 1);
       }
 
-      const timeMatch = dateStr.match(/(\d{1,2})(?:\s*)?(?:am|pm)/i);
+      const timeMatch = dateStr.match(/(\d{1,2})(?:\s*)?(?:am|pm|a\.m\.|p\.m\.)/i);
       if (timeMatch) {
         let hours = parseInt(timeMatch[1]);
-        if (dateStr.includes('pm') && hours < 12) hours += 12;
-        if (dateStr.includes('am') && hours === 12) hours = 0;
+        if (dateStr.includes('pm') || dateStr.includes('p.m.')) hours = hours === 12 ? 12 : hours + 12;
+        if ((dateStr.includes('am') || dateStr.includes('a.m.')) && hours === 12) hours = 0;
         console.log('Setting time for weekday to:', hours);
         return setHours(setMinutes(targetDate, 0), hours);
       }
-      return targetDate;
+      return setHours(setMinutes(targetDate, 0), 9); // Default to 9 AM if no time specified
     }
   }
 
@@ -71,36 +89,44 @@ const parseNaturalDate = (dateStr: string): Date | null => {
         const day = parseInt(dayMatch[1]);
         const date = new Date(now.getFullYear(), value, day);
         
-        // If the date is in the past, assume next year
         if (date < now) {
           date.setFullYear(date.getFullYear() + 1);
         }
 
-        const timeMatch = dateStr.match(/(\d{1,2})(?:\s*)?(?:am|pm)/i);
+        const timeMatch = dateStr.match(/(\d{1,2})(?:\s*)?(?:am|pm|a\.m\.|p\.m\.)/i);
         if (timeMatch) {
           let hours = parseInt(timeMatch[1]);
-          if (dateStr.includes('pm') && hours < 12) hours += 12;
-          if (dateStr.includes('am') && hours === 12) hours = 0;
+          if (dateStr.includes('pm') || dateStr.includes('p.m.')) hours = hours === 12 ? 12 : hours + 12;
+          if ((dateStr.includes('am') || dateStr.includes('a.m.')) && hours === 12) hours = 0;
           console.log('Setting time for specific date to:', hours);
           return setHours(setMinutes(date, 0), hours);
         }
-        return date;
+        return setHours(setMinutes(date, 0), 9); // Default to 9 AM if no time specified
       }
     }
   }
 
-  // Handle "hoy X am/pm"
-  if (dateStr.includes('hoy')) {
-    console.log('Detected "hoy" pattern');
-    const timeMatch = dateStr.match(/(\d{1,2})(?:\s*)?(?:am|pm)/i);
+  // Handle numeric dates (e.g., "15/02" or "15-02")
+  const numericMatch = dateStr.match(/(\d{1,2})[/-](\d{1,2})(?:[/-](\d{4})|)/);
+  if (numericMatch) {
+    console.log('Detected numeric date pattern');
+    const day = parseInt(numericMatch[1]);
+    const month = parseInt(numericMatch[2]) - 1;
+    const year = numericMatch[3] ? parseInt(numericMatch[3]) : now.getFullYear();
+    
+    const date = new Date(year, month, day);
+    if (date < now && !numericMatch[3]) {
+      date.setFullYear(date.getFullYear() + 1);
+    }
+
+    const timeMatch = dateStr.match(/(\d{1,2})(?:\s*)?(?:am|pm|a\.m\.|p\.m\.)/i);
     if (timeMatch) {
       let hours = parseInt(timeMatch[1]);
-      if (dateStr.includes('pm') && hours < 12) hours += 12;
-      if (dateStr.includes('am') && hours === 12) hours = 0;
-      console.log('Setting time for today to:', hours);
-      return setHours(setMinutes(now, 0), hours);
+      if (dateStr.includes('pm') || dateStr.includes('p.m.')) hours = hours === 12 ? 12 : hours + 12;
+      if ((dateStr.includes('am') || dateStr.includes('a.m.')) && hours === 12) hours = 0;
+      return setHours(setMinutes(date, 0), hours);
     }
-    return now;
+    return setHours(setMinutes(date, 0), 9); // Default to 9 AM if no time specified
   }
 
   console.log('No matching date pattern found');
