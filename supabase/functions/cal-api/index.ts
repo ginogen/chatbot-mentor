@@ -177,15 +177,13 @@ serve(async (req) => {
           throw new Error('No se pudo interpretar la fecha proporcionada');
         }
 
-        console.log('Successfully parsed date:', format(parsedDate, 'yyyy-MM-dd HH:mm', { locale: es }));
-        
-        const start = startOfDay(parsedDate);
-        const end = endOfDay(parsedDate);
-        
         if (!integration.config?.selected_calendar) {
           throw new Error('No calendar selected');
         }
 
+        const start = startOfDay(parsedDate);
+        const end = endOfDay(parsedDate);
+        
         endpoint = `${baseUrl}/availability/${integration.config.selected_calendar}`;
         const queryParams = new URLSearchParams({
           start: start.toISOString(),
@@ -240,6 +238,16 @@ serve(async (req) => {
       body: method === 'POST' ? body : undefined,
     });
 
+    if (!response.ok) {
+      console.error('Cal.com API error:', {
+        status: response.status,
+        statusText: response.statusText,
+      });
+      const errorText = await response.text();
+      console.error('Error response body:', errorText);
+      throw new Error(`Cal.com API error: ${response.statusText}`);
+    }
+
     const responseText = await response.text();
     console.log('Raw API response:', responseText);
     
@@ -249,11 +257,6 @@ serve(async (req) => {
     } catch (e) {
       console.error('Failed to parse response:', responseText);
       throw new Error('Invalid response from Cal.com API');
-    }
-
-    if (!response.ok) {
-      console.error('Cal.com API error response:', responseData);
-      throw new Error(`Cal.com API error: ${responseData.message || response.statusText}`);
     }
 
     if (action === 'get_calendars') {
