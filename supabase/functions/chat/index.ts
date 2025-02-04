@@ -8,7 +8,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -20,19 +19,17 @@ serve(async (req) => {
       throw new Error('Message and botId are required');
     }
 
-    // Get OpenAI API key from environment variables
     const openAIApiKey = Deno.env.get('OpenAI_API');
     if (!openAIApiKey) {
       console.error('OpenAI API key not found');
       throw new Error('OpenAI API key not configured');
     }
 
-    // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log('Fetching training data for bot:', botId);
+    console.log('Fetching training data and calendar integration for bot:', botId);
 
     // Get bot training data
     const { data: trainingData, error: trainingError } = await supabase
@@ -44,6 +41,18 @@ serve(async (req) => {
     if (trainingError) {
       console.error('Error fetching training data:', trainingError);
       throw new Error(`Failed to fetch bot training data: ${trainingError.message}`);
+    }
+
+    // Check if bot has Cal.com integration
+    const { data: calIntegration, error: calError } = await supabase
+      .from('bot_integrations')
+      .select('*')
+      .eq('bot_id', botId)
+      .eq('service_name', 'cal')
+      .maybeSingle();
+
+    if (calError) {
+      console.error('Error fetching Cal.com integration:', calError);
     }
 
     // Get processed training documents
@@ -58,7 +67,6 @@ serve(async (req) => {
       throw new Error(`Failed to fetch training documents: ${documentsError.message}`);
     }
 
-    // Prepare document content for context
     let documentContext = '';
     if (documents && documents.length > 0) {
       documentContext = documents
@@ -67,7 +75,18 @@ serve(async (req) => {
         .join('\n');
     }
 
-    // Use default prompts if no training data exists
+    // Add Cal.com context if integration exists
+    let calendarContext = '';
+    if (calIntegration && calIntegration.status === 'connected' && calIntegration.config?.selected_calendar) {
+      calendarContext = `
+        You have access to a calendar integration. When users ask about scheduling meetings, appointments, or any kind of scheduling:
+        1. Acknowledge that you can help them schedule
+        2. Ask them about their preferred day and time
+        3. Respond with: [CALENDAR_ACTION]check_availability{date}[/CALENDAR_ACTION]
+        4. Once they choose a time slot, respond with: [CALENDAR_ACTION]schedule{date,time}[/CALENDAR_ACTION]
+      `;
+    }
+
     const contextPrompt = trainingData?.context_prompt || 'You are a helpful assistant.';
     const negativePrompt = trainingData?.negative_prompt || '';
     const temperature = trainingData?.temperature || 0.7;
@@ -76,6 +95,7 @@ serve(async (req) => {
       ${contextPrompt}
       ${negativePrompt ? `\nDO NOT: ${negativePrompt}` : ''}
       ${documentContext ? '\nReference the following documents when relevant:\n' + documentContext : ''}
+      ${calendarContext}
       Base your responses on the provided context and documents when applicable.
     `.trim();
 
@@ -111,6 +131,12 @@ serve(async (req) => {
     }
 
     const reply = data.choices[0].message.content;
+
+    // Process calendar actions if present
+    if (reply.includes('[CALENDAR_ACTION]')) {
+      // We'll handle these actions in the frontend
+      console.log('Calendar action detected in response');
+    }
 
     return new Response(JSON.stringify({ reply }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

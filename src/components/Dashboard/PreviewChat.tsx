@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Sheet,
   SheetContent,
@@ -34,6 +34,82 @@ export const PreviewChat = ({
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const [calendarIntegration, setCalendarIntegration] = useState<any>(null);
+
+  useEffect(() => {
+    // Fetch Cal.com integration status when chat opens
+    if (open) {
+      fetchCalendarIntegration();
+    }
+  }, [open, botId]);
+
+  const fetchCalendarIntegration = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('bot_integrations')
+        .select('*')
+        .eq('bot_id', botId)
+        .eq('service_name', 'cal')
+        .maybeSingle();
+
+      if (error) throw error;
+      setCalendarIntegration(data);
+    } catch (error) {
+      console.error('Error fetching calendar integration:', error);
+    }
+  };
+
+  const handleCalendarAction = async (action: string, params: string) => {
+    if (!calendarIntegration?.access_token) {
+      toast({
+        title: "Error",
+        description: "Calendar integration not configured",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      if (action === 'check_availability') {
+        // Aquí implementaremos la lógica para verificar disponibilidad
+        const date = params;
+        // TODO: Implementar llamada a Cal.com API para verificar disponibilidad
+        setMessages(prev => [...prev, {
+          role: "assistant",
+          content: `I'll check the availability for ${date}. (This is a placeholder - Cal.com API integration pending)`
+        }]);
+      } else if (action === 'schedule') {
+        // Aquí implementaremos la lógica para agendar
+        const [date, time] = params.split(',');
+        // TODO: Implementar llamada a Cal.com API para agendar
+        setMessages(prev => [...prev, {
+          role: "assistant",
+          content: `I'll schedule the appointment for ${date} at ${time}. (This is a placeholder - Cal.com API integration pending)`
+        }]);
+      }
+    } catch (error) {
+      console.error('Error handling calendar action:', error);
+      toast({
+        title: "Error",
+        description: "Failed to process calendar action",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const processCalendarActions = (content: string) => {
+    const regex = /\[CALENDAR_ACTION\](.*?)\{(.*?)\}\[\/CALENDAR_ACTION\]/g;
+    let match;
+    let processedContent = content;
+
+    while ((match = regex.exec(content)) !== null) {
+      const [fullMatch, action, params] = match;
+      handleCalendarAction(action, params);
+      processedContent = processedContent.replace(fullMatch, '');
+    }
+
+    return processedContent.trim();
+  };
 
   const sendMessage = async () => {
     if (!input.trim()) return;
@@ -50,9 +126,11 @@ export const PreviewChat = ({
 
       if (error) throw error;
 
+      const processedReply = processCalendarActions(data.reply);
+      
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: data.reply },
+        { role: "assistant", content: processedReply },
       ]);
     } catch (error) {
       toast({
