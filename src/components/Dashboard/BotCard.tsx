@@ -3,8 +3,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { TrainBotSheet } from "./TrainBotSheet";
 import { PreviewChat } from "./PreviewChat";
+import { useNavigate } from "react-router-dom";
 
 interface BotCardProps {
   isNew?: boolean;
@@ -16,8 +16,8 @@ interface BotCardProps {
 }
 
 export const BotCard = ({ isNew, name, id, status, whatsappStatus, onClick }: BotCardProps) => {
-  const [isTrainSheetOpen, setIsTrainSheetOpen] = useState(false);
   const [isPreviewChatOpen, setIsPreviewChatOpen] = useState(false);
+  const navigate = useNavigate();
 
   if (isNew) {
     return (
@@ -64,18 +64,15 @@ export const BotCard = ({ isNew, name, id, status, whatsappStatus, onClick }: Bo
           <p className="text-sm text-gray-500 mt-1">Click to manage this bot</p>
         </div>
         <div className="mt-auto pt-4 flex gap-2">
-          <Button variant="outline" className="w-full" onClick={onClick}>
-            Manage
-          </Button>
           <Button 
             variant="default" 
             className="w-full"
             onClick={(e) => {
               e.stopPropagation();
-              setIsTrainSheetOpen(true);
+              navigate(`/bot/${id}`);
             }}
           >
-            Train Bot
+            Manage
           </Button>
           <Button 
             variant="secondary" 
@@ -90,19 +87,12 @@ export const BotCard = ({ isNew, name, id, status, whatsappStatus, onClick }: Bo
         </div>
       </Card>
       {id && name && (
-        <>
-          <TrainBotSheet
-            open={isTrainSheetOpen}
-            onOpenChange={setIsTrainSheetOpen}
-            botId={id}
-          />
-          <PreviewChat
-            open={isPreviewChatOpen}
-            onOpenChange={setIsPreviewChatOpen}
-            botId={id}
-            botName={name}
-          />
-        </>
+        <PreviewChat
+          open={isPreviewChatOpen}
+          onOpenChange={setIsPreviewChatOpen}
+          botId={id}
+          botName={name}
+        />
       )}
     </>
   );

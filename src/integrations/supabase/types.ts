@@ -16,6 +16,7 @@ export type Database = {
           created_at: string
           id: string
           negative_prompt: string | null
+          temperature: number | null
           updated_at: string
         }
         Insert: {
@@ -24,6 +25,7 @@ export type Database = {
           created_at?: string
           id?: string
           negative_prompt?: string | null
+          temperature?: number | null
           updated_at?: string
         }
         Update: {
@@ -32,6 +34,7 @@ export type Database = {
           created_at?: string
           id?: string
           negative_prompt?: string | null
+          temperature?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -73,6 +76,76 @@ export type Database = {
           whatsapp_status?: string
         }
         Relationships: []
+      }
+      conversations: {
+        Row: {
+          bot_id: string | null
+          created_at: string
+          id: string
+          status: string
+          updated_at: string
+          user_identifier: string
+        }
+        Insert: {
+          bot_id?: string | null
+          created_at?: string
+          id?: string
+          status?: string
+          updated_at?: string
+          user_identifier: string
+        }
+        Update: {
+          bot_id?: string | null
+          created_at?: string
+          id?: string
+          status?: string
+          updated_at?: string
+          user_identifier?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_bot_id_fkey"
+            columns: ["bot_id"]
+            isOneToOne: false
+            referencedRelation: "bots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          content: string
+          conversation_id: string | null
+          created_at: string
+          id: string
+          rating: string | null
+          role: string
+        }
+        Insert: {
+          content: string
+          conversation_id?: string | null
+          created_at?: string
+          id?: string
+          rating?: string | null
+          role: string
+        }
+        Update: {
+          content?: string
+          conversation_id?: string | null
+          created_at?: string
+          id?: string
+          rating?: string | null
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       training_documents: {
         Row: {
