@@ -2,49 +2,52 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const openAIApiKey = Deno.env.get('OpenAI_API');
-const supabaseUrl = Deno.env.get('SUPABASE_URL');
-const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const { message, botId } = await req.json();
-    const supabase = createClient(supabaseUrl!, supabaseKey!);
-    
-    // Get bot details
-    const { data: bot, error: botError } = await supabase
-      .from('bots')
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    );
+
+    // Get bot training data
+    const { data: trainingData } = await supabase
+      .from('bot_training')
       .select('*')
-      .eq('id', botId)
+      .eq('bot_id', botId)
       .single();
 
-    if (botError) {
-      throw new Error('Bot not found');
-    }
+    // Get training documents content (in a real implementation, you'd process the documents)
+    const { data: documents } = await supabase
+      .from('training_documents')
+      .select('*')
+      .eq('bot_id', botId);
+
+    const systemPrompt = `
+      ${trainingData?.context_prompt || 'You are a helpful assistant.'}
+      ${trainingData?.negative_prompt ? `\nDO NOT: ${trainingData.negative_prompt}` : ''}
+      ${documents?.length ? '\nReference documents available: ' + documents.map(d => d.file_name).join(', ') : ''}
+    `;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
+        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [
-          {
-            role: 'system',
-            content: `You are a helpful WhatsApp bot named ${bot.name}. Be concise and friendly in your responses.`
-          },
+          { role: 'system', content: systemPrompt },
           { role: 'user', content: message }
         ],
       }),

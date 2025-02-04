@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { TrainBotSheet } from "./TrainBotSheet";
+import { PreviewChat } from "./PreviewChat";
 
 interface BotCardProps {
   isNew?: boolean;
@@ -16,6 +17,7 @@ interface BotCardProps {
 
 export const BotCard = ({ isNew, name, id, status, whatsappStatus, onClick }: BotCardProps) => {
   const [isTrainSheetOpen, setIsTrainSheetOpen] = useState(false);
+  const [isPreviewChatOpen, setIsPreviewChatOpen] = useState(false);
 
   if (isNew) {
     return (
@@ -75,14 +77,32 @@ export const BotCard = ({ isNew, name, id, status, whatsappStatus, onClick }: Bo
           >
             Train Bot
           </Button>
+          <Button 
+            variant="secondary" 
+            className="w-full"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsPreviewChatOpen(true);
+            }}
+          >
+            Preview
+          </Button>
         </div>
       </Card>
-      {id && (
-        <TrainBotSheet
-          open={isTrainSheetOpen}
-          onOpenChange={setIsTrainSheetOpen}
-          botId={id}
-        />
+      {id && name && (
+        <>
+          <TrainBotSheet
+            open={isTrainSheetOpen}
+            onOpenChange={setIsTrainSheetOpen}
+            botId={id}
+          />
+          <PreviewChat
+            open={isPreviewChatOpen}
+            onOpenChange={setIsPreviewChatOpen}
+            botId={id}
+            botName={name}
+          />
+        </>
       )}
     </>
   );
