@@ -4,12 +4,8 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
-import { ContextPromptField } from "./TrainBot/ContextPromptField";
-import { NegativePromptField } from "./TrainBot/NegativePromptField";
-import { TemperatureSelector } from "./TrainBot/TemperatureSelector";
-import { DocumentUploader } from "./TrainBot/DocumentUploader";
-import { Bot, FileText, Settings } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TrainingHeader } from "./TrainBot/TrainingHeader";
+import { TrainingTabs } from "./TrainBot/TrainingTabs";
 
 interface TrainBotViewProps {
   botId: string;
@@ -82,7 +78,6 @@ export function TrainBotView({ botId }: TrainBotViewProps) {
     try {
       setUploading(true);
 
-      // First check if a record exists
       const { data: existingTraining } = await supabase
         .from("bot_training")
         .select("id")
@@ -90,7 +85,6 @@ export function TrainBotView({ botId }: TrainBotViewProps) {
         .maybeSingle();
 
       if (existingTraining) {
-        // Update existing record
         const { error: updateError } = await supabase
           .from("bot_training")
           .update({
@@ -102,7 +96,6 @@ export function TrainBotView({ botId }: TrainBotViewProps) {
 
         if (updateError) throw updateError;
       } else {
-        // Insert new record
         const { error: insertError } = await supabase
           .from("bot_training")
           .insert({
@@ -115,7 +108,6 @@ export function TrainBotView({ botId }: TrainBotViewProps) {
         if (insertError) throw insertError;
       }
 
-      // Handle file uploads
       for (const file of files) {
         const fileExt = file.name.split(".").pop();
         const filePath = `${botId}/${crypto.randomUUID()}.${fileExt}`;
@@ -159,45 +151,20 @@ export function TrainBotView({ botId }: TrainBotViewProps) {
   return (
     <Card className="p-8 max-w-4xl mx-auto">
       <div className="space-y-8">
-        <div className="flex items-center gap-4 pb-6 border-b">
-          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-            <Bot className="w-6 h-6 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Train Bot</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Configure your bot's training parameters and upload training documents</p>
-          </div>
-        </div>
-
-        <Tabs defaultValue="settings" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="settings" className="flex items-center gap-2">
-              <Settings className="w-4 h-4" />
-              Training Settings
-            </TabsTrigger>
-            <TabsTrigger value="documents" className="flex items-center gap-2">
-              <FileText className="w-4 h-4" />
-              Training Documents
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="settings" className="mt-6 space-y-6">
-            <div className="space-y-6">
-              <ContextPromptField value={contextPrompt} onChange={setContextPrompt} />
-              <NegativePromptField value={negativePrompt} onChange={setNegativePrompt} />
-              <TemperatureSelector value={temperature} onChange={setTemperature} />
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="documents" className="mt-6">
-            <DocumentUploader
-              files={files}
-              trainingDocs={trainingDocs}
-              onFileChange={handleFileChange}
-              onRemoveFile={removeFile}
-            />
-          </TabsContent>
-        </Tabs>
+        <TrainingHeader />
+        
+        <TrainingTabs
+          contextPrompt={contextPrompt}
+          negativePrompt={negativePrompt}
+          temperature={temperature}
+          files={files}
+          trainingDocs={trainingDocs}
+          setContextPrompt={setContextPrompt}
+          setNegativePrompt={setNegativePrompt}
+          setTemperature={setTemperature}
+          onFileChange={handleFileChange}
+          onRemoveFile={removeFile}
+        />
         
         <Button 
           onClick={handleSubmit} 
