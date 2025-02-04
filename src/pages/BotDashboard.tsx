@@ -1,10 +1,10 @@
-import { useParams } from "react-router-dom";
 import { useState } from "react";
+import { useParams } from "react-router-dom";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import BotSidebar from "@/components/Dashboard/BotSidebar";
-import TrainBotView from "@/components/Dashboard/TrainBotView";
-import LiveChatView from "@/components/Dashboard/LiveChatView";
-import ConnectView from "@/components/Dashboard/ConnectView";
+import { BotSidebar } from "@/components/Dashboard/BotSidebar";
+import { TrainBotView } from "@/components/Dashboard/TrainBotView";
+import { LiveChatView } from "@/components/Dashboard/LiveChatView";
+import { ConnectView } from "@/components/Dashboard/ConnectView";
 import { PreviewChat } from "@/components/Dashboard/PreviewChat";
 import { Eye } from "lucide-react";
 
@@ -17,7 +17,7 @@ const BotDashboard = () => {
 
   return (
     <div className="flex h-screen">
-      <BotSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <BotSidebar currentView={activeTab} onViewChange={setActiveTab} />
       <div className="flex-1 relative">
         <Tabs value={activeTab} className="h-full">
           <TabsContent value="train" className="h-full m-0">
@@ -26,7 +26,7 @@ const BotDashboard = () => {
           <TabsContent value="connect" className="h-full m-0">
             <ConnectView botId={botId} />
           </TabsContent>
-          <TabsContent value="live" className="h-full m-0">
+          <TabsContent value="chat" className="h-full m-0">
             <LiveChatView botId={botId} />
           </TabsContent>
         </Tabs>
