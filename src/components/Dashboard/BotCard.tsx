@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { PreviewChat } from "./PreviewChat";
-import { useNavigate } from "react-router-dom";
+import { cn } from "@/lib/utils";
 
 interface BotCardProps {
   isNew?: boolean;
@@ -13,11 +13,19 @@ interface BotCardProps {
   status?: "active" | "inactive";
   whatsappStatus?: "disconnected" | "connecting" | "connected";
   onClick: () => void;
+  isSelected?: boolean;
 }
 
-export const BotCard = ({ isNew, name, id, status, whatsappStatus, onClick }: BotCardProps) => {
+export const BotCard = ({ 
+  isNew, 
+  name, 
+  id, 
+  status, 
+  whatsappStatus, 
+  onClick,
+  isSelected 
+}: BotCardProps) => {
   const [isPreviewChatOpen, setIsPreviewChatOpen] = useState(false);
-  const navigate = useNavigate();
 
   if (isNew) {
     return (
@@ -35,8 +43,13 @@ export const BotCard = ({ isNew, name, id, status, whatsappStatus, onClick }: Bo
 
   return (
     <>
-      <Card className="p-6 flex flex-col gap-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-300 min-h-[200px] relative overflow-hidden group">
-        {/* Preview Bubble */}
+      <Card 
+        className={cn(
+          "p-6 flex flex-col gap-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-300 cursor-pointer relative overflow-hidden group",
+          isSelected && "ring-2 ring-primary"
+        )}
+        onClick={onClick}
+      >
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -82,29 +95,7 @@ export const BotCard = ({ isNew, name, id, status, whatsappStatus, onClick }: Bo
         </div>
         <div className="relative">
           <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100">{name}</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Click to manage this bot</p>
-        </div>
-        <div className="mt-auto pt-4 flex gap-2 relative">
-          <Button 
-            variant="default" 
-            className="w-full transition-all duration-300 hover:translate-y-[-2px]"
-            onClick={(e) => {
-              e.stopPropagation();
-              navigate(`/bot/${id}`);
-            }}
-          >
-            Manage
-          </Button>
-          <Button 
-            variant="secondary" 
-            className="w-full transition-all duration-300 hover:translate-y-[-2px]"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsPreviewChatOpen(true);
-            }}
-          >
-            Preview
-          </Button>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Click to select this bot</p>
         </div>
       </Card>
       {id && name && (

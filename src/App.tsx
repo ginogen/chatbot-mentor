@@ -9,7 +9,6 @@ import { supabase } from "@/integrations/supabase/client";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
-import BotDashboard from "./pages/BotDashboard";
 
 // Move queryClient outside of component
 const queryClient = new QueryClient({
@@ -51,7 +50,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-// Make App a proper React component
 const App: React.FC = () => {
   return (
     <React.StrictMode>
@@ -66,14 +64,6 @@ const App: React.FC = () => {
                 element={
                   <ProtectedRoute>
                     <Index />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/bot/:botId"
-                element={
-                  <ProtectedRoute>
-                    <BotDashboard />
                   </ProtectedRoute>
                 }
               />
