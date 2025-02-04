@@ -1,8 +1,12 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { BotCard } from "@/components/Dashboard/BotCard";
 import { CreateBotModal } from "@/components/Dashboard/CreateBotModal";
 import { useToast } from "@/components/ui/use-toast";
 import { whatsappService } from "@/services/whatsappService";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { LogOut } from "lucide-react";
 
 interface Bot {
   id: string;
@@ -16,6 +20,7 @@ const Index = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const initializeWhatsApp = async () => {
@@ -53,14 +58,33 @@ const Index = () => {
     });
   };
 
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to sign out. Please try again.",
+        variant: "destructive",
+      });
+    } else {
+      navigate("/auth");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">WhatsApp Bot Creator</h1>
-          <p className="text-gray-600 mt-2">
-            Create and manage your WhatsApp chatbots easily
-          </p>
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">WhatsApp Bot Creator</h1>
+            <p className="text-gray-600 mt-2">
+              Create and manage your WhatsApp chatbots easily
+            </p>
+          </div>
+          <Button variant="outline" onClick={handleLogout}>
+            <LogOut className="w-4 h-4 mr-2" />
+            Sign Out
+          </Button>
         </div>
 
         {qrCode && (
