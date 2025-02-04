@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { integrationService } from "@/services/integrationService";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Calendar {
   id: string;
@@ -29,7 +30,6 @@ export function CalendarSelector({ botId, integration, onUpdate }: CalendarSelec
 
   useEffect(() => {
     loadCalendars();
-    // Set selected calendar from config if exists
     if (integration.config?.selected_calendar) {
       setSelectedCalendar(integration.config.selected_calendar);
     }
@@ -37,15 +37,12 @@ export function CalendarSelector({ botId, integration, onUpdate }: CalendarSelec
 
   const loadCalendars = async () => {
     try {
-      const response = await fetch("https://api.cal.com/v1/calendars", {
-        headers: {
-          Authorization: `Bearer ${integration.access_token}`,
-        },
+      const { data, error } = await supabase.functions.invoke('cal-api', {
+        body: { action: 'get_calendars', botId },
       });
       
-      if (!response.ok) throw new Error("Failed to load calendars");
+      if (error) throw error;
       
-      const data = await response.json();
       setCalendars(data.calendars.map((cal: any) => ({
         id: cal.id,
         name: cal.name,
