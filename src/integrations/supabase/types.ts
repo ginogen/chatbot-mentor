@@ -236,6 +236,44 @@ export type Database = {
           },
         ]
       }
+      phone_number_purchases: {
+        Row: {
+          amount: number
+          connection_id: string | null
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          payment_intent_id: string | null
+          status: string | null
+        }
+        Insert: {
+          amount: number
+          connection_id?: string | null
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          payment_intent_id?: string | null
+          status?: string | null
+        }
+        Update: {
+          amount?: number
+          connection_id?: string | null
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          payment_intent_id?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "phone_number_purchases_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -336,27 +374,36 @@ export type Database = {
           bot_id: string | null
           created_at: string
           id: string
+          monthly_cost: number | null
           phone_number: string | null
           session_data: Json | null
           status: string | null
+          twilio_phone_sid: string | null
+          twilio_status: string | null
           updated_at: string
         }
         Insert: {
           bot_id?: string | null
           created_at?: string
           id?: string
+          monthly_cost?: number | null
           phone_number?: string | null
           session_data?: Json | null
           status?: string | null
+          twilio_phone_sid?: string | null
+          twilio_status?: string | null
           updated_at?: string
         }
         Update: {
           bot_id?: string | null
           created_at?: string
           id?: string
+          monthly_cost?: number | null
           phone_number?: string | null
           session_data?: Json | null
           status?: string | null
+          twilio_phone_sid?: string | null
+          twilio_status?: string | null
           updated_at?: string
         }
         Relationships: [

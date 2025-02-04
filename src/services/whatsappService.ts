@@ -8,62 +8,12 @@ export interface WhatsAppConnection {
   session_data: any;
   created_at: string;
   updated_at: string;
+  twilio_phone_sid: string | null;
+  twilio_status: string;
+  monthly_cost: number;
 }
 
 class WhatsAppService {
-  async initialize(botId: string) {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session?.access_token) {
-        throw new Error('No authentication session found');
-      }
-
-      const response = await supabase.functions.invoke('whatsapp-init', {
-        body: { botId },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`
-        }
-      });
-
-      if (response.error) {
-        console.error('WhatsApp initialization error:', response.error);
-        throw response.error;
-      }
-      
-      return response.data;
-    } catch (error) {
-      console.error('WhatsApp initialization error:', error);
-      throw error;
-    }
-  }
-
-  async getQRCode(connectionId: string): Promise<string> {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session?.access_token) {
-        throw new Error('No authentication session found');
-      }
-      
-      const response = await supabase.functions.invoke('whatsapp-qr', {
-        body: { connectionId },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`
-        }
-      });
-
-      if (response.error) {
-        throw response.error;
-      }
-
-      return response.data.qrCode;
-    } catch (error) {
-      console.error('Failed to get QR code:', error);
-      throw error;
-    }
-  }
-
   async getConnections(botId: string): Promise<WhatsAppConnection[]> {
     try {
       const { data, error } = await supabase
@@ -73,7 +23,6 @@ class WhatsAppService {
 
       if (error) throw error;
       
-      // Ensure the status is one of the allowed values and type cast the result
       return (data || []).map(conn => ({
         ...conn,
         status: (conn.status as WhatsAppConnection['status']) || 'disconnected'
@@ -97,7 +46,6 @@ class WhatsAppService {
 
       if (error) throw error;
       
-      // Ensure the status is properly typed
       return {
         ...data,
         status: (data.status as WhatsAppConnection['status']) || 'disconnected'
@@ -120,6 +68,23 @@ class WhatsAppService {
       console.error('Failed to delete WhatsApp connection:', error);
       throw error;
     }
+  }
+
+  async listAvailableNumbers(countryCode: string = 'US'): Promise<any[]> {
+    const { data, error } = await supabase.functions.invoke('twilio-api', {
+      body: { action: 'list-available-numbers', countryCode }
+    });
+
+    if (error) throw error;
+    return data.numbers;
+  }
+
+  async purchaseNumber(connectionId: string): Promise<void> {
+    const { error } = await supabase.functions.invoke('twilio-api', {
+      body: { action: 'purchase-number', connectionId }
+    });
+
+    if (error) throw error;
   }
 }
 
