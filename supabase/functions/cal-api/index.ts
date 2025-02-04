@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { format, addMinutes, parseISO, startOfDay, endOfDay, addDays, setHours, setMinutes, parse } from 'https://esm.sh/date-fns@2.30.0';
-import { es } from 'https://esm.sh/date-fns/locale@2.30.0';
+import { format, addMinutes, parseISO, startOfDay, endOfDay, addDays, setHours, setMinutes } from 'https://esm.sh/date-fns@2.30.0';
+import { es } from 'https://esm.sh/date-fns@2.30.0/locale';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -128,7 +128,7 @@ serve(async (req) => {
           end: end.toISOString(),
         });
         endpoint += `?${queryParams.toString()}`;
-        console.log('Checking availability for:', format(parsedDate, 'yyyy-MM-dd'));
+        console.log('Checking availability for:', format(parsedDate, 'yyyy-MM-dd', { locale: es }));
         break;
       }
 
@@ -151,7 +151,7 @@ serve(async (req) => {
           language: "es",
         });
 
-        console.log('Scheduling meeting for:', format(parsedDate, 'yyyy-MM-dd HH:mm'));
+        console.log('Scheduling meeting for:', format(parsedDate, 'yyyy-MM-dd HH:mm', { locale: es }));
         break;
       }
 
@@ -215,7 +215,7 @@ serve(async (req) => {
       }
 
       responseData = { 
-        date: format(parseNaturalDate(rawDate)!, 'yyyy-MM-dd'),
+        date: format(parseNaturalDate(rawDate)!, 'yyyy-MM-dd', { locale: es }),
         availableSlots 
       };
     }
