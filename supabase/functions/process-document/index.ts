@@ -59,9 +59,18 @@ serve(async (req) => {
       content = await fileData.text();
     } else if (document.file_type === 'application/pdf') {
       // For now, we'll just convert PDF to text directly
-      // In a production environment, you might want to use a PDF parsing library
       const text = await fileData.text();
       content = text;
+    } else if (document.file_type === 'text/csv') {
+      // Handle CSV files by converting them to readable text
+      const text = await fileData.text();
+      // Process CSV content to make it more readable
+      const lines = text.split('\n');
+      const processedLines = lines.map(line => {
+        // Replace commas with spaces and clean up the line
+        return line.replace(/,/g, ' | ').trim();
+      });
+      content = processedLines.join('\n');
     } else {
       throw new Error(`Unsupported file type: ${document.file_type}`);
     }
