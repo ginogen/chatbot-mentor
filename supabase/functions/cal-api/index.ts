@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { format, addDays, parseISO } from 'https://esm.sh/date-fns@2.30.0';
+import { format, addDays, parseISO, startOfDay, endOfDay } from 'https://esm.sh/date-fns@2.30.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -45,39 +45,68 @@ serve(async (req) => {
         console.log('Fetching event types from:', endpoint);
         break;
 
-      case 'check_availability':
+      case 'check_availability': {
         if (!date) throw new Error('Date is required for availability check');
         
-        // Format date for Cal.com API
-        const checkDate = date === 'tomorrow' ? addDays(new Date(), 1) : parseISO(date);
-        const formattedDate = format(checkDate, 'yyyy-MM-dd');
+        // Parse and validate the date
+        let checkDate;
+        if (date === 'tomorrow') {
+          checkDate = addDays(new Date(), 1);
+        } else {
+          try {
+            checkDate = parseISO(date);
+            if (isNaN(checkDate.getTime())) {
+              throw new Error('Invalid date format');
+            }
+          } catch (error) {
+            console.error('Date parsing error:', error);
+            throw new Error('Invalid date format provided');
+          }
+        }
+
+        const start = startOfDay(checkDate);
+        const end = endOfDay(checkDate);
         
         endpoint = `${baseUrl}/availability`;
         const queryParams = new URLSearchParams({
-          startTime: `${formattedDate}T00:00:00Z`,
-          endTime: `${formattedDate}T23:59:59Z`,
+          startTime: start.toISOString(),
+          endTime: end.toISOString(),
           ...(integration.config?.selected_calendar && {
             eventTypeId: integration.config.selected_calendar
           })
         });
         endpoint += `?${queryParams.toString()}`;
-        console.log('Checking availability for:', formattedDate);
+        console.log('Checking availability for:', format(checkDate, 'yyyy-MM-dd'));
         break;
+      }
 
-      case 'schedule':
+      case 'schedule': {
         if (!date || !time) throw new Error('Date and time are required for scheduling');
-        endpoint = `${baseUrl}/bookings`;
-        method = 'POST';
-        body = JSON.stringify({
-          eventTypeId: integration.config?.selected_calendar,
-          start: `${date}T${time}:00.000Z`,
-          end: `${date}T${time}:30:00.000Z`, // Adding 30 minutes by default
-          name: "Meeting scheduled via bot",
-          email: "user@example.com", // This should be replaced with actual user email
-          timeZone: "UTC",
-          language: "es",
-        });
+        
+        try {
+          // Validate date and time format
+          const scheduledDate = parseISO(`${date}T${time}`);
+          if (isNaN(scheduledDate.getTime())) {
+            throw new Error('Invalid date or time format');
+          }
+
+          endpoint = `${baseUrl}/bookings`;
+          method = 'POST';
+          body = JSON.stringify({
+            eventTypeId: integration.config?.selected_calendar,
+            start: scheduledDate.toISOString(),
+            end: addDays(scheduledDate, 30).toISOString(), // Adding 30 minutes by default
+            name: "Meeting scheduled via bot",
+            email: "user@example.com", // This should be replaced with actual user email
+            timeZone: "UTC",
+            language: "es",
+          });
+        } catch (error) {
+          console.error('Date/time parsing error:', error);
+          throw new Error('Invalid date or time format provided');
+        }
         break;
+      }
 
       default:
         throw new Error('Invalid action');
@@ -160,12 +189,11 @@ serve(async (req) => {
     console.error('Error in cal-api function:', error);
     return new Response(
       JSON.stringify({ 
-        error: error.message,
-        details: error instanceof Error ? error.stack : undefined
+        error: error.message || 'An unexpected error occurred',
+        details: error.toString()
       }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });
