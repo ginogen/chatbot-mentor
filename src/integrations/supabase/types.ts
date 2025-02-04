@@ -15,6 +15,7 @@ export type Database = {
           bot_id: string | null
           client_id: string | null
           client_secret: string | null
+          config: Json | null
           created_at: string
           credentials: Json
           id: string
@@ -29,6 +30,7 @@ export type Database = {
           bot_id?: string | null
           client_id?: string | null
           client_secret?: string | null
+          config?: Json | null
           created_at?: string
           credentials?: Json
           id?: string
@@ -43,6 +45,7 @@ export type Database = {
           bot_id?: string | null
           client_id?: string | null
           client_secret?: string | null
+          config?: Json | null
           created_at?: string
           credentials?: Json
           id?: string

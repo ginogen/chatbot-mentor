@@ -11,6 +11,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CalendarSelector } from "./Integrations/CalendarSelector";
 import {
   Dialog,
   DialogContent,
@@ -150,6 +151,9 @@ export function IntegrationsView({ botId }: IntegrationsViewProps) {
         {integrationConfigs.map((integration) => {
           const status = getIntegrationStatus(integration.service);
           const isConnected = status === "connected";
+          const currentIntegration = integrations.find(
+            (i) => i.service_name === integration.service
+          );
 
           return (
             <Card key={integration.service} className="p-6">
@@ -169,13 +173,22 @@ export function IntegrationsView({ botId }: IntegrationsViewProps) {
                   </div>
                 </div>
                 {isConnected ? (
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleDisconnect(integration.service)}
-                  >
-                    Disconnect
-                  </Button>
+                  <div className="space-y-4">
+                    {integration.service === "cal" && currentIntegration && (
+                      <CalendarSelector
+                        botId={botId}
+                        integration={currentIntegration}
+                        onUpdate={loadIntegrations}
+                      />
+                    )}
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDisconnect(integration.service)}
+                    >
+                      Disconnect
+                    </Button>
+                  </div>
                 ) : (
                   <Dialog open={selectedService === integration.service} onOpenChange={(open) => {
                     if (!open) {

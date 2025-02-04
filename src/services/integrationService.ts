@@ -15,6 +15,7 @@ export interface Integration {
   access_token: string | null;
   refresh_token: string | null;
   token_expires_at: string | null;
+  config: Record<string, any> | null;
 }
 
 export interface IntegrationCredentials {
@@ -72,5 +73,22 @@ export const integrationService = {
       .eq("service_name", service);
 
     if (error) throw error;
+  },
+
+  async updateIntegrationConfig(
+    botId: string,
+    service: IntegrationService,
+    config: Record<string, any>
+  ): Promise<Integration> {
+    const { data, error } = await supabase
+      .from("bot_integrations")
+      .update({ config })
+      .eq("bot_id", botId)
+      .eq("service_name", service)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as Integration;
   },
 };
