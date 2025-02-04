@@ -1,5 +1,5 @@
 import React from "react";
-import { Bot, MessageSquare, Plug, Settings, LogOut, User } from "lucide-react";
+import { Bot, MessageSquare, Plug, Settings, LogOut, User, Plug2 } from "lucide-react";
 import { CreateBotModal } from "@/components/Dashboard/CreateBotModal";
 import { useToast } from "@/components/ui/use-toast";
 import { whatsappService } from "@/services/whatsappService";
@@ -41,6 +41,38 @@ const Index = () => {
     loadUserProfile();
     loadUserEmail();
   }, []);
+
+  const menuItems = [
+    { id: "chat", label: "Live Chat", icon: MessageSquare },
+    { id: "connect", label: "Connect", icon: Plug },
+    { id: "integrations", label: "Integrations", icon: Plug2 },
+    { id: "settings", label: "Settings", icon: Settings },
+  ];
+
+  const renderMainContent = () => {
+    if (!selectedBot && selectedView !== "settings") {
+      return (
+        <div className="flex items-center justify-center h-full">
+          <p className="text-gray-500">Select a bot to get started</p>
+        </div>
+      );
+    }
+
+    switch (selectedView) {
+      case "train":
+        return <TrainBotView botId={selectedBot!} />;
+      case "chat":
+        return <LiveChatView botId={selectedBot!} />;
+      case "integrations":
+        return <IntegrationsView botId={selectedBot!} />;
+      case "connect":
+        return <ConnectView botId={selectedBot!} />;
+      case "settings":
+        return <SettingsView />;
+      default:
+        return null;
+    }
+  };
 
   const loadUserEmail = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -127,37 +159,6 @@ const Index = () => {
       return userProfile.first_name + (userProfile.last_name ? ` ${userProfile.last_name}` : '');
     }
     return userEmail || 'User';
-  };
-
-  const menuItems = [
-    { id: "chat", label: "Live Chat", icon: MessageSquare },
-    { id: "connect", label: "Connect", icon: Plug },
-    { id: "settings", label: "Settings", icon: Settings },
-  ];
-
-  const renderMainContent = () => {
-    if (!selectedBot && selectedView !== "settings") {
-      return (
-        <div className="flex items-center justify-center h-full">
-          <p className="text-gray-500">Select a bot to get started</p>
-        </div>
-      );
-    }
-
-    switch (selectedView) {
-      case "train":
-        return <TrainBotView botId={selectedBot!} />;
-      case "chat":
-        return <LiveChatView botId={selectedBot!} />;
-      case "integrations":
-        return <IntegrationsView botId={selectedBot!} />;
-      case "connect":
-        return <ConnectView botId={selectedBot!} />;
-      case "settings":
-        return <SettingsView />;
-      default:
-        return null;
-    }
   };
 
   return (
