@@ -32,13 +32,22 @@ const Index = () => {
   const [selectedView, setSelectedView] = React.useState<string>("train");
   const [isTrainMenuOpen, setIsTrainMenuOpen] = React.useState(false);
   const [userProfile, setUserProfile] = React.useState<any>(null);
+  const [userEmail, setUserEmail] = React.useState<string | null>(null);
   const { toast } = useToast();
 
   React.useEffect(() => {
     loadBots();
     initializeWhatsApp();
     loadUserProfile();
+    loadUserEmail();
   }, []);
+
+  const loadUserEmail = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      setUserEmail(user.email || null);
+    }
+  };
 
   const loadUserProfile = async () => {
     try {
@@ -111,6 +120,13 @@ const Index = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const getUserDisplayName = () => {
+    if (userProfile?.first_name) {
+      return userProfile.first_name + (userProfile.last_name ? ` ${userProfile.last_name}` : '');
+    }
+    return userEmail || 'User';
   };
 
   const menuItems = [
@@ -209,7 +225,7 @@ const Index = () => {
           <div className="w-full bg-white dark:bg-gray-800 border-b border-border p-4 flex justify-between items-center">
             <div className="flex items-center gap-2">
               <User className="w-5 h-5" />
-              <span>{userProfile?.first_name || userProfile?.email || 'User'}</span>
+              <span>{getUserDisplayName()}</span>
             </div>
             <Button variant="outline" size="sm" onClick={handleLogout}>
               <LogOut className="w-4 h-4 mr-2" />
