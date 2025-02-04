@@ -30,11 +30,11 @@ export const BotCard = ({
   if (isNew) {
     return (
       <Card
-        className="p-4 flex items-center justify-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-300 border-2 border-dashed min-h-[80px] group"
+        className="glass-card p-6 flex items-center justify-center gap-3 cursor-pointer hover:bg-secondary/70 transition-all duration-300 border-2 border-dashed border-primary/20 min-h-[180px] group hover-scale"
         onClick={onClick}
       >
-        <Plus className="w-4 h-4 text-primary group-hover:scale-110 transition-transform duration-300" />
-        <span className="text-sm text-gray-600 dark:text-gray-300 font-medium">New Bot</span>
+        <Plus className="w-6 h-6 text-primary group-hover:scale-110 transition-transform duration-300" />
+        <span className="text-base text-primary/80 font-medium">Create New Bot</span>
       </Card>
     );
   }
@@ -43,22 +43,22 @@ export const BotCard = ({
     <>
       <Card 
         className={cn(
-          "p-4 flex flex-col gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-300 cursor-pointer relative overflow-hidden",
-          isSelected && "ring-2 ring-primary"
+          "glass-card p-6 flex flex-col gap-3 hover:bg-secondary/70 transition-all duration-300 cursor-pointer relative overflow-hidden group hover-scale",
+          isSelected && "ring-2 ring-primary border-transparent"
         )}
         onClick={onClick}
       >
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-              <Bot className="w-4 h-4 text-primary" />
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Bot className="w-5 h-5 text-primary" />
             </div>
-            <h3 className="font-medium text-sm text-gray-900 dark:text-gray-100">{name}</h3>
+            <h3 className="font-semibold text-base text-white group-hover:text-primary transition-colors">{name}</h3>
           </div>
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7"
+            className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
             onClick={(e) => {
               e.stopPropagation();
               setIsPreviewChatOpen(true);
@@ -68,7 +68,7 @@ export const BotCard = ({
           </Button>
         </div>
 
-        <div className="flex gap-2 mt-1">
+        <div className="flex gap-2 mt-2">
           <Badge
             variant={status === "active" ? "default" : "secondary"}
             className="text-xs"
@@ -80,9 +80,9 @@ export const BotCard = ({
               variant="outline"
               className={cn(
                 "text-xs",
-                whatsappStatus === "connected" && "text-green-600 border-green-600",
-                whatsappStatus === "connecting" && "text-yellow-600 border-yellow-600",
-                whatsappStatus === "disconnected" && "text-gray-600 border-gray-600"
+                whatsappStatus === "connected" && "text-green-400 border-green-400/30",
+                whatsappStatus === "connecting" && "text-yellow-400 border-yellow-400/30",
+                whatsappStatus === "disconnected" && "text-gray-400 border-gray-400/30"
               )}
             >
               {whatsappStatus}
