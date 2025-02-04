@@ -17,6 +17,19 @@ interface Message {
   content: string;
 }
 
+interface CalendarConfig {
+  selected_calendar: string;
+  calendar_name?: string;
+}
+
+interface CalendarIntegration {
+  id: string;
+  bot_id: string;
+  service_name: string;
+  status: string;
+  config: CalendarConfig | null;
+}
+
 interface PreviewChatProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -34,7 +47,7 @@ export const PreviewChat = ({
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const [calendarIntegration, setCalendarIntegration] = useState<any>(null);
+  const [calendarIntegration, setCalendarIntegration] = useState<CalendarIntegration | null>(null);
   const [isCalendarConfigured, setIsCalendarConfigured] = useState(false);
 
   useEffect(() => {
