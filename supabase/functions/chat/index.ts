@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { format, addDays, parseISO } from 'https://esm.sh/date-fns@2.30.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -81,9 +82,16 @@ serve(async (req) => {
       calendarContext = `
         You have access to a calendar integration. When users ask about scheduling meetings, appointments, or any kind of scheduling:
         1. Acknowledge that you can help them schedule
-        2. Ask them about their preferred day and time
-        3. Respond with: [CALENDAR_ACTION]check_availability{date}[/CALENDAR_ACTION]
-        4. Once they choose a time slot, respond with: [CALENDAR_ACTION]schedule{date,time}[/CALENDAR_ACTION]
+        2. If they mention a specific date (like "tomorrow" or "next week"), use that date to check availability
+        3. For checking availability, respond with: [CALENDAR_ACTION]check_availability{date}[/CALENDAR_ACTION]
+        4. Once they choose a time slot from the available ones, respond with: [CALENDAR_ACTION]schedule{date,time}[/CALENDAR_ACTION]
+        
+        Important: For dates, understand natural language like:
+        - "tomorrow" -> use tomorrow's date
+        - "next week" -> use date 7 days from now
+        - Specific dates like "February 10th" -> use that exact date
+        
+        Always confirm the date and time with the user before scheduling.
       `;
     }
 
@@ -108,7 +116,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: message }
@@ -131,12 +139,6 @@ serve(async (req) => {
     }
 
     const reply = data.choices[0].message.content;
-
-    // Process calendar actions if present
-    if (reply.includes('[CALENDAR_ACTION]')) {
-      // We'll handle these actions in the frontend
-      console.log('Calendar action detected in response');
-    }
 
     return new Response(JSON.stringify({ reply }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

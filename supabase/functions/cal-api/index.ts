@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { format, addDays, parseISO } from 'https://esm.sh/date-fns@2.30.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -36,24 +37,33 @@ serve(async (req) => {
     let endpoint = baseUrl;
     let method = 'GET';
     let body;
+    let responseData;
     
     switch (action) {
       case 'get_calendars':
         endpoint = `${baseUrl}/event-types`;
         console.log('Fetching event types from:', endpoint);
         break;
+
       case 'check_availability':
         if (!date) throw new Error('Date is required for availability check');
+        
+        // Format date for Cal.com API
+        const checkDate = date === 'tomorrow' ? addDays(new Date(), 1) : parseISO(date);
+        const formattedDate = format(checkDate, 'yyyy-MM-dd');
+        
         endpoint = `${baseUrl}/availability`;
         const queryParams = new URLSearchParams({
-          startTime: `${date}T00:00:00Z`,
-          endTime: `${date}T23:59:59Z`,
+          startTime: `${formattedDate}T00:00:00Z`,
+          endTime: `${formattedDate}T23:59:59Z`,
           ...(integration.config?.selected_calendar && {
             eventTypeId: integration.config.selected_calendar
           })
         });
         endpoint += `?${queryParams.toString()}`;
+        console.log('Checking availability for:', formattedDate);
         break;
+
       case 'schedule':
         if (!date || !time) throw new Error('Date and time are required for scheduling');
         endpoint = `${baseUrl}/bookings`;
@@ -68,6 +78,7 @@ serve(async (req) => {
           language: "es",
         });
         break;
+
       default:
         throw new Error('Invalid action');
     }
@@ -84,7 +95,6 @@ serve(async (req) => {
     });
 
     const responseText = await response.text();
-    let responseData;
     
     try {
       responseData = JSON.parse(responseText);
@@ -99,7 +109,7 @@ serve(async (req) => {
       throw new Error(`Cal.com API error: ${responseData.message || response.statusText}`);
     }
 
-    // Extract event types from the response structure
+    // Process the response based on the action
     if (action === 'get_calendars' && responseData.data?.eventTypeGroups) {
       const eventTypes = responseData.data.eventTypeGroups
         .flatMap((group: any) => {
@@ -118,6 +128,29 @@ serve(async (req) => {
       
       console.log('Processed event types:', eventTypes);
       responseData = { eventTypes };
+    } else if (action === 'check_availability') {
+      // Process availability data to make it more user-friendly
+      const slots = responseData.busy || [];
+      const availableSlots = [];
+      const startTime = 9; // 9 AM
+      const endTime = 17; // 5 PM
+
+      for (let hour = startTime; hour < endTime; hour++) {
+        const timeSlot = `${hour.toString().padStart(2, '0')}:00`;
+        const isAvailable = !slots.some((slot: any) => {
+          const slotTime = new Date(slot.start).getHours();
+          return slotTime === hour;
+        });
+
+        if (isAvailable) {
+          availableSlots.push(timeSlot);
+        }
+      }
+
+      responseData = { 
+        date: format(parseISO(date), 'yyyy-MM-dd'),
+        availableSlots 
+      };
     }
     
     return new Response(JSON.stringify(responseData), {
