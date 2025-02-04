@@ -20,6 +20,13 @@ serve(async (req) => {
       throw new Error('Message and botId are required');
     }
 
+    // Get OpenAI API key from environment variables
+    const openAIApiKey = Deno.env.get('OpenAI_API');
+    if (!openAIApiKey) {
+      console.error('OpenAI API key not found');
+      throw new Error('OpenAI API key not configured');
+    }
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -59,7 +66,7 @@ serve(async (req) => {
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Authorization': `Bearer ${openAIApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -74,7 +81,7 @@ serve(async (req) => {
     if (!openAIResponse.ok) {
       const errorData = await openAIResponse.json();
       console.error('OpenAI API error:', errorData);
-      throw new Error('Failed to get response from OpenAI');
+      throw new Error(`Failed to get response from OpenAI: ${errorData.error?.message || 'Unknown error'}`);
     }
 
     const data = await openAIResponse.json();
