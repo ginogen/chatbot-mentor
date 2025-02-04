@@ -171,7 +171,7 @@ serve(async (req) => {
       config: integration.config
     });
 
-    const baseUrl = 'https://api.cal.com/v1';
+    const baseUrl = 'https://api.cal.com/v2';
     let endpoint = baseUrl;
     let method = 'GET';
     let body;
@@ -278,7 +278,7 @@ serve(async (req) => {
     }
 
     if (action === 'get_calendars') {
-      const eventTypes = Array.isArray(responseData) ? responseData.map(eventType => ({
+      const eventTypes = Array.isArray(responseData.event_types) ? responseData.event_types.map(eventType => ({
         id: eventType.id.toString(),
         name: eventType.title || eventType.name,
         description: eventType.description,
