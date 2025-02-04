@@ -192,7 +192,8 @@ export function IntegrationsView({ botId }: IntegrationsViewProps) {
                 </Button>
               </div>
             </Card>
-          ))}
+          );
+        })}
       </div>
     </div>
   );
