@@ -4,8 +4,8 @@
 
 @layer base {
   :root {
-    --background: 0 0% 10%;
-    --foreground: 0 0% 100%;
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
     --card: 240 10% 3.9%;
     --card-foreground: 0 0% 98%;
     --popover: 240 10% 3.9%;
@@ -48,5 +48,25 @@
   
   .text-gradient {
     @apply bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent;
+  }
+
+  .sidebar-gradient {
+    @apply bg-gradient-dark;
+  }
+
+  .nav-item {
+    @apply relative flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 hover:bg-white/5;
+  }
+
+  .nav-item.active {
+    @apply bg-primary/10 text-primary;
+  }
+
+  .nav-item .icon {
+    @apply w-5 h-5 transition-colors duration-200;
+  }
+
+  .glass-effect {
+    @apply bg-secondary/30 backdrop-blur-md border border-white/5;
   }
 }

@@ -61,6 +61,7 @@ export default {
         'gradient-primary': 'linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)',
         'gradient-secondary': 'linear-gradient(135deg, #1A1B1E 0%, #2C2D31 100%)',
         'gradient-accent': 'linear-gradient(135deg, #312E81 0%, #4338CA 100%)',
+        'gradient-dark': 'linear-gradient(to right, rgba(17,24,39,1), rgba(88,28,135,0.2))',
       },
     },
   },

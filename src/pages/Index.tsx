@@ -163,20 +163,20 @@ const Index = () => {
 
   return (
     <SidebarProvider defaultOpen>
-      <div className="flex min-h-screen w-full bg-gray-50 dark:bg-gray-900">
-        <Sidebar>
-          <SidebarHeader className="border-b border-border p-4">
-            <h2 className="text-lg font-semibold">WhatsApp Bot Creator</h2>
+      <div className="flex min-h-screen w-full bg-[#13141C]">
+        <Sidebar className="sidebar-gradient border-r border-white/5">
+          <SidebarHeader className="border-b border-white/5 p-4">
+            <h2 className="text-lg font-semibold text-gradient">WhatsApp Bot Creator</h2>
           </SidebarHeader>
           <SidebarContent>
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={() => setIsTrainMenuOpen(!isTrainMenuOpen)}
-                  className="w-full justify-between"
+                  className="nav-item"
                 >
                   <div className="flex items-center">
-                    <Bot className="w-4 h-4 mr-2" />
+                    <Bot className="icon" />
                     <span>Train Bot</span>
                   </div>
                 </SidebarMenuButton>
@@ -186,7 +186,7 @@ const Index = () => {
                       variant="ghost"
                       size="sm"
                       onClick={() => setIsCreateModalOpen(true)}
-                      className="w-full justify-start text-sm mb-2"
+                      className="w-full justify-start text-sm mb-2 hover:bg-white/5"
                     >
                       + Add Bot
                     </Button>
@@ -197,7 +197,7 @@ const Index = () => {
                             setSelectedBot(bot.id);
                             setSelectedView("train");
                           }}
-                          isActive={selectedBot === bot.id && selectedView === "train"}
+                          className={`nav-item ${selectedBot === bot.id && selectedView === "train" ? "active" : ""}`}
                         >
                           {bot.name}
                         </SidebarMenuSubButton>
@@ -211,9 +211,9 @@ const Index = () => {
                 <SidebarMenuItem key={item.id}>
                   <SidebarMenuButton
                     onClick={() => setSelectedView(item.id)}
-                    isActive={selectedView === item.id}
+                    className={`nav-item ${selectedView === item.id ? "active" : ""}`}
                   >
-                    <item.icon className="w-4 h-4 mr-2" />
+                    <item.icon className="icon" />
                     <span>{item.label}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -223,12 +223,19 @@ const Index = () => {
         </Sidebar>
 
         <SidebarInset className="flex flex-col">
-          <div className="w-full bg-white dark:bg-gray-800 border-b border-border p-4 flex justify-between items-center">
+          <div className="w-full glass-effect p-4 flex justify-between items-center">
             <div className="flex items-center gap-2">
-              <User className="w-5 h-5" />
-              <span>{getUserDisplayName()}</span>
+              <div className="p-2 rounded-full bg-primary/10">
+                <User className="w-5 h-5 text-primary" />
+              </div>
+              <span className="text-white/90">{getUserDisplayName()}</span>
             </div>
-            <Button variant="outline" size="sm" onClick={handleLogout}>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleLogout}
+              className="hover:bg-white/5"
+            >
               <LogOut className="w-4 h-4 mr-2" />
               Sign Out
             </Button>
