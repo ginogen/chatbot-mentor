@@ -33,10 +33,13 @@ export function ProfileSection() {
       }
 
       // Get user profile
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("first_name")
-        .single();
+        .eq('id', user?.id)
+        .maybeSingle();
+      
+      if (profileError) throw profileError;
       
       if (profile?.first_name) {
         setFirstName(profile.first_name);
@@ -52,6 +55,11 @@ export function ProfileSection() {
       }
     } catch (error: any) {
       console.error('Error loading user data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load user data. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -60,12 +68,15 @@ export function ProfileSection() {
     setIsLoading(true);
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("No authenticated user found");
+
       const { error } = await supabase
         .from("profiles")
         .update({
           first_name: firstName,
         })
-        .eq("id", (await supabase.auth.getUser()).data.user?.id);
+        .eq("id", user.id);
 
       if (error) throw error;
 
