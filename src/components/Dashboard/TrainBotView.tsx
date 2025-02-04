@@ -80,17 +80,40 @@ export function TrainBotView({ botId }: TrainBotViewProps) {
     try {
       setUploading(true);
 
-      const { error: trainingError } = await supabase
+      // First check if a record exists
+      const { data: existingTraining } = await supabase
         .from("bot_training")
-        .upsert({
-          bot_id: botId,
-          context_prompt: contextPrompt,
-          negative_prompt: negativePrompt,
-          temperature: parseFloat(temperature),
-        });
+        .select("id")
+        .eq("bot_id", botId)
+        .maybeSingle();
 
-      if (trainingError) throw trainingError;
+      if (existingTraining) {
+        // Update existing record
+        const { error: updateError } = await supabase
+          .from("bot_training")
+          .update({
+            context_prompt: contextPrompt,
+            negative_prompt: negativePrompt,
+            temperature: parseFloat(temperature),
+          })
+          .eq("bot_id", botId);
 
+        if (updateError) throw updateError;
+      } else {
+        // Insert new record
+        const { error: insertError } = await supabase
+          .from("bot_training")
+          .insert({
+            bot_id: botId,
+            context_prompt: contextPrompt,
+            negative_prompt: negativePrompt,
+            temperature: parseFloat(temperature),
+          });
+
+        if (insertError) throw insertError;
+      }
+
+      // Handle file uploads
       for (const file of files) {
         const fileExt = file.name.split(".").pop();
         const filePath = `${botId}/${crypto.randomUUID()}.${fileExt}`;
@@ -120,6 +143,7 @@ export function TrainBotView({ botId }: TrainBotViewProps) {
 
       setFiles([]);
     } catch (error) {
+      console.error("Error saving training configuration:", error);
       toast({
         title: "Error",
         description: "Failed to save training configuration",
