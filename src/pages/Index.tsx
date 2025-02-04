@@ -40,7 +40,7 @@ const Index = () => {
       const { data: profile } = await supabase
         .from('profiles')
         .select('*')
-        .single();
+        .maybeSingle();
       setUserProfile(profile);
     } catch (error) {
       console.error('Error loading user profile:', error);
@@ -53,29 +53,11 @@ const Index = () => {
       setBots(loadedBots);
       if (loadedBots.length > 0 && !selectedBot) {
         setSelectedBot(loadedBots[0].id);
-        await initializeWhatsApp(loadedBots[0].id);
       }
     } catch (error) {
       toast({
         title: "Error",
         description: "Failed to load bots. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const initializeWhatsApp = async (botId: string) => {
-    try {
-      await whatsappService.initialize(botId);
-      toast({
-        title: "WhatsApp Connection",
-        description: "WhatsApp service initialized successfully",
-      });
-    } catch (error) {
-      console.error('WhatsApp initialization error:', error);
-      toast({
-        title: "Error",
-        description: "Failed to connect to WhatsApp service. Please try again later.",
         variant: "destructive",
       });
     }
@@ -144,7 +126,6 @@ const Index = () => {
           </div>
         </SidebarInset>
 
-        {/* Floating Preview Button - Always visible */}
         <button
           onClick={() => setIsPreviewChatOpen(true)}
           className="fixed bottom-8 right-8 w-14 h-14 rounded-full bg-primary shadow-lg flex items-center justify-center transition-transform hover:scale-110 z-50 hover:bg-primary-light"
