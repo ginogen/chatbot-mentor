@@ -11,30 +11,45 @@ export type Database = {
     Tables: {
       bot_integrations: {
         Row: {
+          access_token: string | null
           bot_id: string | null
+          client_id: string | null
+          client_secret: string | null
           created_at: string
           credentials: Json
           id: string
+          refresh_token: string | null
           service_name: string
           status: string
+          token_expires_at: string | null
           updated_at: string
         }
         Insert: {
+          access_token?: string | null
           bot_id?: string | null
+          client_id?: string | null
+          client_secret?: string | null
           created_at?: string
           credentials?: Json
           id?: string
+          refresh_token?: string | null
           service_name: string
           status?: string
+          token_expires_at?: string | null
           updated_at?: string
         }
         Update: {
+          access_token?: string | null
           bot_id?: string | null
+          client_id?: string | null
+          client_secret?: string | null
           created_at?: string
           credentials?: Json
           id?: string
+          refresh_token?: string | null
           service_name?: string
           status?: string
+          token_expires_at?: string | null
           updated_at?: string
         }
         Relationships: [

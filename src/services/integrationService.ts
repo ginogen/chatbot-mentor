@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export type IntegrationStatus = "connected" | "disconnected" | "pending";
-export type IntegrationService = "cal" | "calendly" | "mercadopago" | "paypal";
+export type IntegrationService = "cal" | "mercadopago";
 
 export interface Integration {
   id: string;
@@ -11,6 +11,16 @@ export interface Integration {
   status: IntegrationStatus;
   created_at: string;
   updated_at: string;
+  client_id: string | null;
+  client_secret: string | null;
+  access_token: string | null;
+  refresh_token: string | null;
+  token_expires_at: string | null;
+}
+
+export interface IntegrationCredentials {
+  client_id: string;
+  client_secret: string;
 }
 
 export const integrationService = {
@@ -27,7 +37,7 @@ export const integrationService = {
   async connectIntegration(
     botId: string,
     service: IntegrationService,
-    credentials: Record<string, any>
+    credentials: IntegrationCredentials
   ): Promise<Integration> {
     const { data, error } = await supabase
       .from("bot_integrations")
@@ -35,7 +45,8 @@ export const integrationService = {
         {
           bot_id: botId,
           service_name: service,
-          credentials,
+          client_id: credentials.client_id,
+          client_secret: credentials.client_secret,
           status: "connected",
         },
         { onConflict: "bot_id,service_name" }
@@ -50,7 +61,14 @@ export const integrationService = {
   async disconnectIntegration(botId: string, service: IntegrationService): Promise<void> {
     const { error } = await supabase
       .from("bot_integrations")
-      .update({ status: "disconnected", credentials: {} })
+      .update({ 
+        status: "disconnected", 
+        client_id: null,
+        client_secret: null,
+        access_token: null,
+        refresh_token: null,
+        token_expires_at: null
+      })
       .eq("bot_id", botId)
       .eq("service_name", service);
 

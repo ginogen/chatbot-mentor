@@ -9,6 +9,15 @@ import {
   type IntegrationService,
 } from "@/services/integrationService";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 interface IntegrationsViewProps {
   botId: string;
@@ -19,6 +28,11 @@ export function IntegrationsView({ botId }: IntegrationsViewProps) {
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
   const [integrations, setIntegrations] = useState<Integration[]>([]);
+  const [selectedService, setSelectedService] = useState<IntegrationService | null>(null);
+  const [credentials, setCredentials] = useState({
+    client_id: "",
+    client_secret: "",
+  });
 
   const integrationConfigs = [
     {
@@ -26,14 +40,22 @@ export function IntegrationsView({ botId }: IntegrationsViewProps) {
       description: "Schedule meetings directly through your bot",
       icon: Calendar,
       service: "cal" as IntegrationService,
-      authUrl: "https://app.cal.com/oauth/authorize",
+      fields: {
+        client_id: "Client ID",
+        client_secret: "Client Secret",
+      },
+      helpText: "You can find your credentials in your Cal.com account settings under API Keys.",
     },
     {
       name: "MercadoPago",
       description: "Accept payments through MercadoPago",
       icon: CreditCard,
       service: "mercadopago" as IntegrationService,
-      authUrl: "https://auth.mercadopago.com/authorization",
+      fields: {
+        client_id: "Client ID",
+        client_secret: "Client Secret",
+      },
+      helpText: "You can find your credentials in your MercadoPago developer dashboard.",
     },
   ];
 
@@ -60,34 +82,16 @@ export function IntegrationsView({ botId }: IntegrationsViewProps) {
   const handleConnect = async (service: IntegrationService) => {
     setConnecting(true);
     try {
-      const config = integrationConfigs.find((c) => c.service === service);
-      if (!config) throw new Error("Invalid service");
-
-      // Open OAuth window
-      const width = 600;
-      const height = 600;
-      const left = window.screenX + (window.outerWidth - width) / 2;
-      const top = window.screenY + (window.outerHeight - height) / 2;
-      const authWindow = window.open(
-        config.authUrl,
-        "Connect " + config.name,
-        `width=${width},height=${height},left=${left},top=${top}`
-      );
-
-      if (!authWindow) {
-        throw new Error("Failed to open authentication window");
-      }
-
-      // For demo purposes, we'll simulate a successful connection
-      // In a real implementation, you would handle the OAuth callback
-      const credentials = { token: "demo_token" };
       await integrationService.connectIntegration(botId, service, credentials);
       await loadIntegrations();
-
+      
+      const config = integrationConfigs.find((c) => c.service === service);
       toast({
         title: "Success",
-        description: `Connected to ${config.name} successfully.`,
+        description: `Connected to ${config?.name} successfully.`,
       });
+      setSelectedService(null);
+      setCredentials({ client_id: "", client_secret: "" });
     } catch (error) {
       console.error("Failed to connect:", error);
       toast({
@@ -164,18 +168,78 @@ export function IntegrationsView({ botId }: IntegrationsViewProps) {
                     </p>
                   </div>
                 </div>
-                <Button
-                  variant={isConnected ? "destructive" : "outline"}
-                  size="sm"
-                  onClick={() =>
-                    isConnected
-                      ? handleDisconnect(integration.service)
-                      : handleConnect(integration.service)
-                  }
-                  disabled={connecting}
-                >
-                  {isConnected ? "Disconnect" : "Connect"}
-                </Button>
+                {isConnected ? (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => handleDisconnect(integration.service)}
+                  >
+                    Disconnect
+                  </Button>
+                ) : (
+                  <Dialog open={selectedService === integration.service} onOpenChange={(open) => {
+                    if (!open) {
+                      setSelectedService(null);
+                      setCredentials({ client_id: "", client_secret: "" });
+                    }
+                  }}>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedService(integration.service)}
+                      >
+                        Connect
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Connect to {integration.name}</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <p className="text-sm text-muted-foreground">
+                          {integration.helpText}
+                        </p>
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="client_id">Client ID</Label>
+                            <Input
+                              id="client_id"
+                              value={credentials.client_id}
+                              onChange={(e) =>
+                                setCredentials({
+                                  ...credentials,
+                                  client_id: e.target.value,
+                                })
+                              }
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="client_secret">Client Secret</Label>
+                            <Input
+                              id="client_secret"
+                              type="password"
+                              value={credentials.client_secret}
+                              onChange={(e) =>
+                                setCredentials({
+                                  ...credentials,
+                                  client_secret: e.target.value,
+                                })
+                              }
+                            />
+                          </div>
+                        </div>
+                        <Button
+                          className="w-full"
+                          onClick={() => handleConnect(integration.service)}
+                          disabled={connecting || !credentials.client_id || !credentials.client_secret}
+                        >
+                          {connecting ? "Connecting..." : "Connect"}
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                )}
               </div>
             </Card>
           );
