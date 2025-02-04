@@ -35,9 +35,9 @@ export const PreviewChat = ({
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const [calendarIntegration, setCalendarIntegration] = useState<any>(null);
+  const [isCalendarConfigured, setIsCalendarConfigured] = useState(false);
 
   useEffect(() => {
-    // Fetch Cal.com integration status when chat opens
     if (open) {
       fetchCalendarIntegration();
     }
@@ -45,7 +45,7 @@ export const PreviewChat = ({
 
   const fetchCalendarIntegration = async () => {
     try {
-      const { data, error } = await supabase
+      const { data: integration, error } = await supabase
         .from('bot_integrations')
         .select('*')
         .eq('bot_id', botId)
@@ -53,45 +53,80 @@ export const PreviewChat = ({
         .maybeSingle();
 
       if (error) throw error;
-      setCalendarIntegration(data);
+
+      // Verificar si la integración está completamente configurada
+      const isConfigured = integration && 
+                          integration.status === 'connected' && 
+                          integration.config?.selected_calendar;
+
+      setIsCalendarConfigured(!!isConfigured);
+      setCalendarIntegration(integration);
+
     } catch (error) {
       console.error('Error fetching calendar integration:', error);
+      setIsCalendarConfigured(false);
     }
   };
 
   const handleCalendarAction = async (action: string, params: string) => {
-    if (!calendarIntegration?.access_token) {
-      toast({
-        title: "Error",
-        description: "Calendar integration not configured",
-        variant: "destructive",
-      });
+    if (!isCalendarConfigured) {
+      const errorMessage = "Lo siento, la integración con el calendario no está configurada correctamente. Por favor, configura la integración con Cal.com primero.";
+      setMessages(prev => [...prev, {
+        role: "assistant",
+        content: errorMessage
+      }]);
       return;
     }
 
     try {
       if (action === 'check_availability') {
-        // Aquí implementaremos la lógica para verificar disponibilidad
-        const date = params;
-        // TODO: Implementar llamada a Cal.com API para verificar disponibilidad
-        setMessages(prev => [...prev, {
-          role: "assistant",
-          content: `I'll check the availability for ${date}. (This is a placeholder - Cal.com API integration pending)`
-        }]);
+        const { data, error } = await supabase.functions.invoke('cal-api', {
+          body: { 
+            action: 'check_availability', 
+            date: params,
+            botId 
+          }
+        });
+
+        if (error) throw error;
+
+        if (data.availableSlots && data.availableSlots.length > 0) {
+          const slotsMessage = `Los horarios disponibles para ${params} son:\n` +
+            data.availableSlots.map((slot: string) => `- ${slot}`).join('\n');
+          
+          setMessages(prev => [...prev, {
+            role: "assistant",
+            content: slotsMessage
+          }]);
+        } else {
+          setMessages(prev => [...prev, {
+            role: "assistant",
+            content: `Lo siento, no hay horarios disponibles para ${params}. ¿Te gustaría revisar otro día?`
+          }]);
+        }
       } else if (action === 'schedule') {
-        // Aquí implementaremos la lógica para agendar
         const [date, time] = params.split(',');
-        // TODO: Implementar llamada a Cal.com API para agendar
+        const { data, error } = await supabase.functions.invoke('cal-api', {
+          body: { 
+            action: 'schedule', 
+            date,
+            time,
+            botId 
+          }
+        });
+
+        if (error) throw error;
+
         setMessages(prev => [...prev, {
           role: "assistant",
-          content: `I'll schedule the appointment for ${date} at ${time}. (This is a placeholder - Cal.com API integration pending)`
+          content: `¡Perfecto! Tu reunión ha sido agendada para el ${date} a las ${time}. Recibirás un correo de confirmación con los detalles.`
         }]);
       }
     } catch (error) {
       console.error('Error handling calendar action:', error);
       toast({
         title: "Error",
-        description: "Failed to process calendar action",
+        description: "Hubo un problema al procesar tu solicitud de calendario",
         variant: "destructive",
       });
     }
@@ -128,14 +163,16 @@ export const PreviewChat = ({
 
       const processedReply = processCalendarActions(data.reply);
       
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: processedReply },
-      ]);
+      if (processedReply) {
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: processedReply },
+        ]);
+      }
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to get response from the bot",
+        description: "No se pudo obtener respuesta del bot",
         variant: "destructive",
       });
     } finally {
@@ -147,7 +184,7 @@ export const PreviewChat = ({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-[400px] sm:w-[540px] flex flex-col h-full p-0">
         <SheetHeader className="p-6 border-b">
-          <SheetTitle>Chat with {botName}</SheetTitle>
+          <SheetTitle>Chat con {botName}</SheetTitle>
         </SheetHeader>
         <ScrollArea className="flex-1 p-6">
           <div className="space-y-4">
@@ -172,7 +209,7 @@ export const PreviewChat = ({
             {isLoading && (
               <div className="flex justify-start">
                 <div className="max-w-[80%] rounded-lg p-3 bg-muted">
-                  Thinking...
+                  Pensando...
                 </div>
               </div>
             )}
@@ -189,7 +226,7 @@ export const PreviewChat = ({
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Type your message..."
+              placeholder="Escribe tu mensaje..."
               disabled={isLoading}
             />
             <Button type="submit" disabled={isLoading}>
