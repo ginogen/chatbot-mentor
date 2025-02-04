@@ -43,10 +43,16 @@ export function CalendarSelector({ botId, integration, onUpdate }: CalendarSelec
       
       if (error) throw error;
       
-      setCalendars(data.calendars.map((cal: any) => ({
-        id: cal.id,
-        name: cal.name,
-      })));
+      // Check if data exists and has the expected structure
+      if (data?.eventTypes && Array.isArray(data.eventTypes)) {
+        setCalendars(data.eventTypes.map((cal: any) => ({
+          id: cal.id.toString(),
+          name: cal.title || cal.name,
+        })));
+      } else {
+        console.error('Unexpected response format:', data);
+        throw new Error('Invalid response format from Cal.com API');
+      }
     } catch (error) {
       console.error("Error loading calendars:", error);
       toast({

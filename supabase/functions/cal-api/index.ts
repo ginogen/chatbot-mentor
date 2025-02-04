@@ -40,10 +40,11 @@ serve(async (req) => {
     switch (action) {
       case 'get_calendars':
         endpoint = `${baseUrl}/event-types`;
+        console.log('Fetching calendars from:', endpoint);
         break;
       case 'check_availability':
         if (!date) throw new Error('Date is required for availability check');
-        endpoint = `${baseUrl}/schedules`;
+        endpoint = `${baseUrl}/availability`;
         const queryParams = new URLSearchParams({
           startTime: `${date}T00:00:00Z`,
           endTime: `${date}T23:59:59Z`,
