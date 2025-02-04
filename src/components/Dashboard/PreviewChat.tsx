@@ -67,7 +67,15 @@ export const PreviewChat = ({
       if (error) throw error;
 
       if (integration) {
-        const config = integration.config as CalendarConfig | null;
+        // Type guard to check if config has the required structure
+        const isValidConfig = (config: any): config is CalendarConfig => {
+          return typeof config === 'object' && 
+                 config !== null && 
+                 'selected_calendar' in config && 
+                 typeof config.selected_calendar === 'string';
+        };
+
+        const config = isValidConfig(integration.config) ? integration.config : null;
         const calIntegration: CalendarIntegration = {
           ...integration,
           config
