@@ -14,6 +14,7 @@ serve(async (req) => {
   }
 
   try {
+    // Verify authentication
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       throw new Error('Missing authorization header');
@@ -29,6 +30,7 @@ serve(async (req) => {
       }
     );
 
+    // Verify the user is authenticated
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     if (authError || !user) {
       console.error('Authentication error:', authError);
@@ -46,8 +48,31 @@ serve(async (req) => {
       throw new Error('Missing botId parameter');
     }
 
+    // Verify the user owns this bot
+    const { data: bot, error: botError } = await supabaseClient
+      .from('bots')
+      .select('*')
+      .eq('id', botId)
+      .eq('user_id', user.id)
+      .single();
+
+    if (botError || !bot) {
+      console.error('Bot access error:', botError);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized', details: 'Bot not found or access denied' }),
+        { 
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
     try {
-      const client = new Client({});
+      const client = new Client({
+        puppeteer: {
+          args: ['--no-sandbox', '--disable-setuid-sandbox']
+        }
+      });
       
       client.on('qr', (qr) => {
         console.log('QR RECEIVED', qr);
