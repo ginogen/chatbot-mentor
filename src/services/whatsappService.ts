@@ -10,14 +10,17 @@ class WhatsAppService {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
-      if (!session) {
+      if (!session?.access_token) {
         throw new Error('User must be authenticated to initialize WhatsApp');
       }
 
       console.log('Initializing WhatsApp with authenticated session');
       
       const response = await supabase.functions.invoke('whatsapp-init', {
-        body: { action: 'initialize' }
+        body: { action: 'initialize' },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
       });
 
       if (response.error) {
@@ -37,14 +40,17 @@ class WhatsAppService {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
-      if (!session) {
+      if (!session?.access_token) {
         throw new Error('User must be authenticated to get QR code');
       }
 
       console.log('Fetching QR code with authenticated session');
       
       const response = await supabase.functions.invoke('whatsapp-qr', {
-        body: { action: 'getQR' }
+        body: { action: 'getQR' },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
       });
 
       if (response.error) {
