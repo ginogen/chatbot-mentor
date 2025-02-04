@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { format, addMinutes, parseISO, startOfDay, endOfDay, addDays, setHours, setMinutes } from 'https://esm.sh/date-fns@2.30.0';
+import { format, addMinutes, startOfDay, endOfDay, addDays, setHours, setMinutes } from 'https://esm.sh/date-fns@2.30.0';
 import { es } from 'https://esm.sh/date-fns@2.30.0/locale';
 
 const corsHeaders = {
@@ -12,7 +12,6 @@ const parseNaturalDate = (dateStr: string): Date | null => {
   const now = new Date();
   dateStr = dateStr.toLowerCase().trim();
 
-  // Handle "mañana X am/pm"
   if (dateStr.includes('mañana')) {
     const tomorrow = addDays(now, 1);
     const timeMatch = dateStr.match(/(\d{1,2})(?:\s*)?(?:am|pm)/);
@@ -24,7 +23,6 @@ const parseNaturalDate = (dateStr: string): Date | null => {
     return tomorrow;
   }
 
-  // Handle "próximo [día]"
   const weekdays = {
     'lunes': 1, 'martes': 2, 'miércoles': 3, 'miercoles': 3,
     'jueves': 4, 'viernes': 5, 'sábado': 6, 'sabado': 6, 'domingo': 0
@@ -46,7 +44,6 @@ const parseNaturalDate = (dateStr: string): Date | null => {
     }
   }
 
-  // Handle specific dates like "6 de febrero"
   const monthNames = {
     'enero': 0, 'febrero': 1, 'marzo': 2, 'abril': 3, 'mayo': 4, 'junio': 5,
     'julio': 6, 'agosto': 7, 'septiembre': 8, 'octubre': 9, 'noviembre': 10, 'diciembre': 11
@@ -78,8 +75,8 @@ serve(async (req) => {
   }
 
   try {
-    const { action, botId, date: rawDate, time } = await req.json();
-    console.log('Received request:', { action, botId, rawDate, time });
+    const { action, botId, date: rawDate } = await req.json();
+    console.log('Received request:', { action, botId, rawDate });
     
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -122,7 +119,11 @@ serve(async (req) => {
         const start = startOfDay(parsedDate);
         const end = endOfDay(parsedDate);
         
-        endpoint = `${baseUrl}/availability/${integration.config?.selected_calendar}`;
+        if (!integration.config?.selected_calendar) {
+          throw new Error('No calendar selected');
+        }
+
+        endpoint = `${baseUrl}/availability/${integration.config.selected_calendar}`;
         const queryParams = new URLSearchParams({
           start: start.toISOString(),
           end: end.toISOString(),
@@ -140,9 +141,14 @@ serve(async (req) => {
           throw new Error('No se pudo interpretar la fecha proporcionada');
         }
 
-        endpoint = `${baseUrl}/bookings/${integration.config?.selected_calendar}`;
+        if (!integration.config?.selected_calendar) {
+          throw new Error('No calendar selected');
+        }
+
+        endpoint = `${baseUrl}/bookings`;
         method = 'POST';
         body = JSON.stringify({
+          eventTypeId: parseInt(integration.config.selected_calendar),
           start: parsedDate.toISOString(),
           end: addMinutes(parsedDate, 30).toISOString(),
           name: "Meeting scheduled via bot",
