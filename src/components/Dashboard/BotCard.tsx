@@ -1,4 +1,4 @@
-import { Bot, Plus } from "lucide-react";
+import { Bot, Plus, Eye } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,19 @@ export const BotCard = ({ isNew, name, id, status, whatsappStatus, onClick }: Bo
 
   return (
     <>
-      <Card className="p-6 flex flex-col gap-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-300 min-h-[200px] relative overflow-hidden">
+      <Card className="p-6 flex flex-col gap-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-300 min-h-[200px] relative overflow-hidden group">
+        {/* Preview Bubble */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsPreviewChatOpen(true);
+          }}
+          className="absolute top-4 right-4 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-primary/20 z-10"
+          title="Preview Chat"
+        >
+          <Eye className="w-5 h-5 text-primary" />
+        </button>
+
         <div className="absolute top-0 right-0 w-32 h-32 -mr-16 -mt-16 bg-primary/5 rounded-full" />
         <div className="flex items-center justify-between relative">
           <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
