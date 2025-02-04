@@ -7,13 +7,7 @@ import { whatsappService } from "@/services/whatsappService";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
-
-interface Bot {
-  id: string;
-  name: string;
-  status: "active" | "inactive";
-  whatsappStatus: "disconnected" | "connecting" | "connected";
-}
+import { botService, Bot } from "@/services/botService";
 
 const Index = () => {
   const [bots, setBots] = useState<Bot[]>([]);
@@ -23,39 +17,73 @@ const Index = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const initializeWhatsApp = async () => {
-      try {
-        await whatsappService.initialize();
-        const qrCode = await whatsappService.getQRCode();
-        setQrCode(qrCode);
-        toast({
-          title: "WhatsApp Connection",
-          description: "Scan the QR code to connect WhatsApp",
-        });
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to connect to WhatsApp service. Please try again later.",
-          variant: "destructive",
-        });
-      }
-    };
-
+    loadBots();
     initializeWhatsApp();
-  }, [toast]);
+  }, []);
 
-  const handleCreateBot = (name: string) => {
-    const newBot: Bot = {
-      id: Date.now().toString(),
-      name,
-      status: "inactive",
-      whatsappStatus: whatsappService.getConnectionStatus(),
-    };
-    setBots([...bots, newBot]);
-    toast({
-      title: "Success",
-      description: "Bot created successfully!",
-    });
+  const loadBots = async () => {
+    try {
+      const loadedBots = await botService.getBots();
+      setBots(loadedBots);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load bots. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const initializeWhatsApp = async () => {
+    try {
+      await whatsappService.initialize();
+      const qrCode = await whatsappService.getQRCode();
+      setQrCode(qrCode);
+      toast({
+        title: "WhatsApp Connection",
+        description: "Scan the QR code to connect WhatsApp",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to connect to WhatsApp service. Please try again later.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCreateBot = async (name: string) => {
+    try {
+      const newBot = await botService.createBot(name);
+      setBots([newBot, ...bots]);
+      toast({
+        title: "Success",
+        description: "Bot created successfully!",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create bot. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteBot = async (botId: string) => {
+    try {
+      await botService.deleteBot(botId);
+      setBots(bots.filter(bot => bot.id !== botId));
+      toast({
+        title: "Success",
+        description: "Bot deleted successfully!",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete bot. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleLogout = async () => {
@@ -106,7 +134,7 @@ const Index = () => {
               key={bot.id}
               name={bot.name}
               status={bot.status}
-              whatsappStatus={bot.whatsappStatus}
+              whatsappStatus={bot.whatsapp_status}
               onClick={() => {
                 toast({
                   title: "Coming Soon",
