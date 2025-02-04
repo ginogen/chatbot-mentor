@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { whatsappService, type WhatsAppConnection } from "@/services/whatsappService";
-import { Plus, Trash2, RefreshCw } from "lucide-react";
+import { Plus, Trash2, RefreshCw, QrCode, Maximize2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,6 +16,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface ConnectViewProps {
   botId: string;
@@ -25,6 +32,7 @@ export function ConnectView({ botId }: ConnectViewProps) {
   const [connections, setConnections] = useState<WhatsAppConnection[]>([]);
   const [loading, setLoading] = useState(true);
   const [qrCodes, setQrCodes] = useState<Record<string, string>>({});
+  const [selectedQR, setSelectedQR] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -89,6 +97,7 @@ export function ConnectView({ botId }: ConnectViewProps) {
       await whatsappService.initialize(botId);
       const qrCode = await whatsappService.getQRCode(connectionId);
       setQrCodes((prev) => ({ ...prev, [connectionId]: qrCode }));
+      console.log("QR Code received:", qrCode); // Debug log
     } catch (error) {
       console.error("Failed to initialize WhatsApp:", error);
       toast({
@@ -133,6 +142,15 @@ export function ConnectView({ botId }: ConnectViewProps) {
                 </p>
               </div>
               <div className="flex space-x-2">
+                {qrCodes[connection.id] && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setSelectedQR(qrCodes[connection.id])}
+                  >
+                    <QrCode className="w-4 h-4" />
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   size="icon"
@@ -170,20 +188,52 @@ export function ConnectView({ botId }: ConnectViewProps) {
             {qrCodes[connection.id] && (
               <div className="flex flex-col items-center space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Scan this QR code with WhatsApp on your phone to connect:
+                  Scan this QR code with WhatsApp on your phone to connect
                 </p>
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
-                    qrCodes[connection.id]
-                  )}`}
-                  alt="WhatsApp QR Code"
-                  className="mx-auto"
-                />
+                <div className="relative">
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(
+                      qrCodes[connection.id]
+                    )}`}
+                    alt="WhatsApp QR Code"
+                    className="mx-auto"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="absolute top-0 right-0 bg-background/80 backdrop-blur-sm"
+                    onClick={() => setSelectedQR(qrCodes[connection.id])}
+                  >
+                    <Maximize2 className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             )}
           </Card>
         ))}
       </div>
+
+      <Dialog open={!!selectedQR} onOpenChange={() => setSelectedQR(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Scan QR Code</DialogTitle>
+            <DialogDescription>
+              Scan this QR code with WhatsApp on your phone to connect
+            </DialogDescription>
+          </DialogHeader>
+          {selectedQR && (
+            <div className="flex justify-center p-6">
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
+                  selectedQR
+                )}`}
+                alt="WhatsApp QR Code"
+                className="mx-auto"
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
