@@ -7,7 +7,6 @@ export interface Integration {
   id: string;
   bot_id: string;
   service_name: IntegrationService;
-  credentials: Record<string, any>;
   status: IntegrationStatus;
   created_at: string;
   updated_at: string;
