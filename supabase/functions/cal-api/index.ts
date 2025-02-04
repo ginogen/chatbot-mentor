@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { format, addDays, parseISO, startOfDay, endOfDay } from 'https://esm.sh/date-fns@2.30.0';
+import { format, addMinutes, parseISO, startOfDay, endOfDay } from 'https://esm.sh/date-fns@2.30.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -50,33 +50,37 @@ serve(async (req) => {
         
         // Parse and validate the date
         let checkDate;
-        if (date === 'tomorrow') {
-          checkDate = addDays(new Date(), 1);
-        } else {
-          try {
+        try {
+          if (date === 'tomorrow') {
+            checkDate = addMinutes(new Date(), 24 * 60); // Add 24 hours
+          } else if (date === 'today') {
+            checkDate = new Date();
+          } else {
+            // Try to parse the date string
             checkDate = parseISO(date);
-            if (isNaN(checkDate.getTime())) {
-              throw new Error('Invalid date format');
-            }
-          } catch (error) {
-            console.error('Date parsing error:', error);
-            throw new Error('Invalid date format provided');
           }
-        }
 
-        const start = startOfDay(checkDate);
-        const end = endOfDay(checkDate);
-        
-        endpoint = `${baseUrl}/availability`;
-        const queryParams = new URLSearchParams({
-          startTime: start.toISOString(),
-          endTime: end.toISOString(),
-          ...(integration.config?.selected_calendar && {
-            eventTypeId: integration.config.selected_calendar
-          })
-        });
-        endpoint += `?${queryParams.toString()}`;
-        console.log('Checking availability for:', format(checkDate, 'yyyy-MM-dd'));
+          if (isNaN(checkDate.getTime())) {
+            throw new Error('Invalid date value');
+          }
+
+          const start = startOfDay(checkDate);
+          const end = endOfDay(checkDate);
+          
+          endpoint = `${baseUrl}/availability`;
+          const queryParams = new URLSearchParams({
+            startTime: start.toISOString(),
+            endTime: end.toISOString(),
+            ...(integration.config?.selected_calendar && {
+              eventTypeId: integration.config.selected_calendar
+            })
+          });
+          endpoint += `?${queryParams.toString()}`;
+          console.log('Checking availability for:', format(checkDate, 'yyyy-MM-dd'));
+        } catch (error) {
+          console.error('Date parsing error:', error);
+          throw new Error('Invalid date format provided');
+        }
         break;
       }
 
@@ -84,10 +88,22 @@ serve(async (req) => {
         if (!date || !time) throw new Error('Date and time are required for scheduling');
         
         try {
-          // Validate date and time format
+          // Ensure date is in yyyy-MM-dd format and time is in HH:mm format
+          const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+          const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
+
+          if (!dateRegex.test(date)) {
+            throw new Error('Date must be in yyyy-MM-dd format');
+          }
+
+          if (!timeRegex.test(time)) {
+            throw new Error('Time must be in HH:mm format');
+          }
+
+          // Parse the date and time
           const scheduledDate = parseISO(`${date}T${time}`);
           if (isNaN(scheduledDate.getTime())) {
-            throw new Error('Invalid date or time format');
+            throw new Error('Invalid date or time combination');
           }
 
           endpoint = `${baseUrl}/bookings`;
@@ -95,15 +111,17 @@ serve(async (req) => {
           body = JSON.stringify({
             eventTypeId: integration.config?.selected_calendar,
             start: scheduledDate.toISOString(),
-            end: addDays(scheduledDate, 30).toISOString(), // Adding 30 minutes by default
+            end: addMinutes(scheduledDate, 30).toISOString(), // Adding 30 minutes by default
             name: "Meeting scheduled via bot",
             email: "user@example.com", // This should be replaced with actual user email
             timeZone: "UTC",
             language: "es",
           });
+
+          console.log('Scheduling meeting for:', format(scheduledDate, 'yyyy-MM-dd HH:mm'));
         } catch (error) {
           console.error('Date/time parsing error:', error);
-          throw new Error('Invalid date or time format provided');
+          throw new Error(`Invalid date or time format: ${error.message}`);
         }
         break;
       }
