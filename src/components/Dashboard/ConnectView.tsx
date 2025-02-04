@@ -43,6 +43,12 @@ export function ConnectView({ botId }: ConnectViewProps) {
     try {
       const data = await whatsappService.getConnections(botId);
       setConnections(data);
+      // Intentar inicializar las conexiones existentes
+      data.forEach(connection => {
+        if (connection.status === 'disconnected') {
+          initializeConnection(connection.id);
+        }
+      });
     } catch (error) {
       console.error("Failed to load connections:", error);
       toast({
@@ -96,8 +102,8 @@ export function ConnectView({ botId }: ConnectViewProps) {
     try {
       await whatsappService.initialize(botId);
       const qrCode = await whatsappService.getQRCode(connectionId);
+      console.log("QR Code received for connection", connectionId, ":", qrCode);
       setQrCodes((prev) => ({ ...prev, [connectionId]: qrCode }));
-      console.log("QR Code received:", qrCode); // Debug log
     } catch (error) {
       console.error("Failed to initialize WhatsApp:", error);
       toast({
@@ -142,15 +148,13 @@ export function ConnectView({ botId }: ConnectViewProps) {
                 </p>
               </div>
               <div className="flex space-x-2">
-                {qrCodes[connection.id] && (
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setSelectedQR(qrCodes[connection.id])}
-                  >
-                    <QrCode className="w-4 h-4" />
-                  </Button>
-                )}
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => initializeConnection(connection.id)}
+                >
+                  <QrCode className="w-4 h-4" />
+                </Button>
                 <Button
                   variant="outline"
                   size="icon"
