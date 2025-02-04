@@ -8,7 +8,8 @@ import { ContextPromptField } from "./TrainBot/ContextPromptField";
 import { NegativePromptField } from "./TrainBot/NegativePromptField";
 import { TemperatureSelector } from "./TrainBot/TemperatureSelector";
 import { DocumentUploader } from "./TrainBot/DocumentUploader";
-import { Bot } from "lucide-react";
+import { Bot, FileText, Settings } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface TrainBotViewProps {
   botId: string;
@@ -167,32 +168,44 @@ export function TrainBotView({ botId }: TrainBotViewProps) {
             <p className="text-sm text-gray-500 dark:text-gray-400">Configure your bot's training parameters and upload training documents</p>
           </div>
         </div>
-        
-        <div className="space-y-8">
-          <div className="grid gap-8 md:grid-cols-2">
-            <div className="space-y-8">
+
+        <Tabs defaultValue="settings" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="settings" className="flex items-center gap-2">
+              <Settings className="w-4 h-4" />
+              Training Settings
+            </TabsTrigger>
+            <TabsTrigger value="documents" className="flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              Training Documents
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="settings" className="mt-6 space-y-6">
+            <div className="space-y-6">
               <ContextPromptField value={contextPrompt} onChange={setContextPrompt} />
               <NegativePromptField value={negativePrompt} onChange={setNegativePrompt} />
-            </div>
-            <div className="space-y-8">
               <TemperatureSelector value={temperature} onChange={setTemperature} />
-              <DocumentUploader
-                files={files}
-                trainingDocs={trainingDocs}
-                onFileChange={handleFileChange}
-                onRemoveFile={removeFile}
-              />
             </div>
-          </div>
+          </TabsContent>
           
-          <Button 
-            onClick={handleSubmit} 
-            disabled={uploading} 
-            className="w-full transition-all duration-300 hover:translate-y-[-2px]"
-          >
-            {uploading ? "Saving..." : "Save Training Configuration"}
-          </Button>
-        </div>
+          <TabsContent value="documents" className="mt-6">
+            <DocumentUploader
+              files={files}
+              trainingDocs={trainingDocs}
+              onFileChange={handleFileChange}
+              onRemoveFile={removeFile}
+            />
+          </TabsContent>
+        </Tabs>
+        
+        <Button 
+          onClick={handleSubmit} 
+          disabled={uploading} 
+          className="w-full transition-all duration-300 hover:translate-y-[-2px]"
+        >
+          {uploading ? "Saving..." : "Save Training Configuration"}
+        </Button>
       </div>
     </Card>
   );
