@@ -1,20 +1,13 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
-import { Upload, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { ContextPromptField } from "./TrainBot/ContextPromptField";
+import { NegativePromptField } from "./TrainBot/NegativePromptField";
+import { TemperatureSelector } from "./TrainBot/TemperatureSelector";
+import { DocumentUploader } from "./TrainBot/DocumentUploader";
 
 interface TrainBotViewProps {
   botId: string;
@@ -142,90 +135,15 @@ export function TrainBotView({ botId }: TrainBotViewProps) {
       <div className="space-y-6">
         <h1 className="text-2xl font-bold">Train Bot</h1>
         <div className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="context">Context Prompt</Label>
-            <Textarea
-              id="context"
-              placeholder="Provide context and instructions for the bot..."
-              value={contextPrompt}
-              onChange={(e) => setContextPrompt(e.target.value)}
-              className="min-h-[100px]"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="negative">Negative Prompt</Label>
-            <Textarea
-              id="negative"
-              placeholder="Specify what the bot should not do..."
-              value={negativePrompt}
-              onChange={(e) => setNegativePrompt(e.target.value)}
-              className="min-h-[100px]"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="temperature">Temperature</Label>
-            <Select
-              value={temperature}
-              onValueChange={setTemperature}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select temperature" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="0.1">0.1 - Very focused</SelectItem>
-                <SelectItem value="0.3">0.3 - Focused</SelectItem>
-                <SelectItem value="0.5">0.5 - Balanced</SelectItem>
-                <SelectItem value="0.7">0.7 - Creative</SelectItem>
-                <SelectItem value="0.9">0.9 - Very creative</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-4">
-            <Label>Training Documents</Label>
-            <div className="grid gap-4">
-              {files.map((file, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-2 border rounded"
-                >
-                  <span className="truncate">{file.name}</span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removeFile(index)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-              {trainingDocs?.map((doc) => (
-                <div
-                  key={doc.id}
-                  className="flex items-center justify-between p-2 border rounded bg-gray-50"
-                >
-                  <span className="truncate">{doc.file_name}</span>
-                </div>
-              ))}
-            </div>
-            <div className="flex items-center gap-4">
-              <Input
-                type="file"
-                onChange={handleFileChange}
-                accept=".pdf,.doc,.docx,.txt,.csv"
-                className="hidden"
-                id="file-upload"
-                multiple
-              />
-              <Button
-                variant="outline"
-                onClick={() => document.getElementById("file-upload")?.click()}
-                className="w-full"
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                Upload Documents
-              </Button>
-            </div>
-          </div>
+          <ContextPromptField value={contextPrompt} onChange={setContextPrompt} />
+          <NegativePromptField value={negativePrompt} onChange={setNegativePrompt} />
+          <TemperatureSelector value={temperature} onChange={setTemperature} />
+          <DocumentUploader
+            files={files}
+            trainingDocs={trainingDocs}
+            onFileChange={handleFileChange}
+            onRemoveFile={removeFile}
+          />
           <Button onClick={handleSubmit} disabled={uploading} className="w-full">
             {uploading ? "Saving..." : "Save Training Configuration"}
           </Button>
