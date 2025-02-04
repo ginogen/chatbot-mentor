@@ -132,6 +132,7 @@ const Index = () => {
           {bots.map((bot) => (
             <BotCard
               key={bot.id}
+              id={bot.id}
               name={bot.name}
               status={bot.status}
               whatsappStatus={bot.whatsapp_status}

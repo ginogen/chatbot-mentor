@@ -9,6 +9,41 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      bot_training: {
+        Row: {
+          bot_id: string | null
+          context_prompt: string
+          created_at: string
+          id: string
+          negative_prompt: string | null
+          updated_at: string
+        }
+        Insert: {
+          bot_id?: string | null
+          context_prompt: string
+          created_at?: string
+          id?: string
+          negative_prompt?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bot_id?: string | null
+          context_prompt?: string
+          created_at?: string
+          id?: string
+          negative_prompt?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bot_training_bot_id_fkey"
+            columns: ["bot_id"]
+            isOneToOne: false
+            referencedRelation: "bots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bots: {
         Row: {
           created_at: string
@@ -38,6 +73,41 @@ export type Database = {
           whatsapp_status?: string
         }
         Relationships: []
+      }
+      training_documents: {
+        Row: {
+          bot_id: string | null
+          created_at: string
+          file_name: string
+          file_path: string
+          file_type: string
+          id: string
+        }
+        Insert: {
+          bot_id?: string | null
+          created_at?: string
+          file_name: string
+          file_path: string
+          file_type: string
+          id?: string
+        }
+        Update: {
+          bot_id?: string | null
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          file_type?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_documents_bot_id_fkey"
+            columns: ["bot_id"]
+            isOneToOne: false
+            referencedRelation: "bots"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

@@ -1,16 +1,22 @@
 import { Bot, Plus } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { TrainBotSheet } from "./TrainBotSheet";
 
 interface BotCardProps {
   isNew?: boolean;
   name?: string;
+  id?: string;
   status?: "active" | "inactive";
   whatsappStatus?: "disconnected" | "connecting" | "connected";
   onClick: () => void;
 }
 
-export const BotCard = ({ isNew, name, status, whatsappStatus, onClick }: BotCardProps) => {
+export const BotCard = ({ isNew, name, id, status, whatsappStatus, onClick }: BotCardProps) => {
+  const [isTrainSheetOpen, setIsTrainSheetOpen] = useState(false);
+
   if (isNew) {
     return (
       <Card
@@ -24,39 +30,60 @@ export const BotCard = ({ isNew, name, status, whatsappStatus, onClick }: BotCar
   }
 
   return (
-    <Card
-      className="p-6 flex flex-col gap-4 cursor-pointer hover:bg-gray-50 transition-colors min-h-[200px]"
-      onClick={onClick}
-    >
-      <div className="flex items-center justify-between">
-        <Bot className="w-8 h-8 text-primary" />
-        <div className="flex gap-2">
-          <Badge
-            variant={status === "active" ? "default" : "secondary"}
-            className={status === "active" ? "bg-green-500" : ""}
-          >
-            {status}
-          </Badge>
-          {whatsappStatus && (
+    <>
+      <Card className="p-6 flex flex-col gap-4 hover:bg-gray-50 transition-colors min-h-[200px]">
+        <div className="flex items-center justify-between">
+          <Bot className="w-8 h-8 text-primary" />
+          <div className="flex gap-2">
             <Badge
-              variant="outline"
-              className={`${
-                whatsappStatus === "connected"
-                  ? "border-green-500 text-green-700"
-                  : whatsappStatus === "connecting"
-                  ? "border-yellow-500 text-yellow-700"
-                  : "border-gray-500 text-gray-700"
-              }`}
+              variant={status === "active" ? "default" : "secondary"}
+              className={status === "active" ? "bg-green-500" : ""}
             >
-              WhatsApp: {whatsappStatus}
+              {status}
             </Badge>
-          )}
+            {whatsappStatus && (
+              <Badge
+                variant="outline"
+                className={`${
+                  whatsappStatus === "connected"
+                    ? "border-green-500 text-green-700"
+                    : whatsappStatus === "connecting"
+                    ? "border-yellow-500 text-yellow-700"
+                    : "border-gray-500 text-gray-700"
+                }`}
+              >
+                WhatsApp: {whatsappStatus}
+              </Badge>
+            )}
+          </div>
         </div>
-      </div>
-      <div>
-        <h3 className="font-semibold text-lg">{name}</h3>
-        <p className="text-sm text-gray-500 mt-1">Click to manage this bot</p>
-      </div>
-    </Card>
+        <div>
+          <h3 className="font-semibold text-lg">{name}</h3>
+          <p className="text-sm text-gray-500 mt-1">Click to manage this bot</p>
+        </div>
+        <div className="mt-auto pt-4 flex gap-2">
+          <Button variant="outline" className="w-full" onClick={onClick}>
+            Manage
+          </Button>
+          <Button 
+            variant="default" 
+            className="w-full"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsTrainSheetOpen(true);
+            }}
+          >
+            Train Bot
+          </Button>
+        </div>
+      </Card>
+      {id && (
+        <TrainBotSheet
+          open={isTrainSheetOpen}
+          onOpenChange={setIsTrainSheetOpen}
+          botId={id}
+        />
+      )}
+    </>
   );
 };
