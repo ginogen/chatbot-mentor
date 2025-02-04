@@ -1,4 +1,4 @@
-import { Robot, MessageSquare, Plug, BarChart } from "lucide-react";
+import { Bot, MessageSquare, Plug, BarChart } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -24,7 +24,7 @@ export function BotSidebar({ currentView, onViewChange }: BotSidebarProps) {
     },
     {
       title: "Train Bot",
-      icon: Robot,
+      icon: Bot,
       value: "train" as const,
     },
     {
