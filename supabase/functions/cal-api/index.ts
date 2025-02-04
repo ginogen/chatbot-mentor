@@ -32,8 +32,8 @@ serve(async (req) => {
       throw new Error('Cal.com integration not found or invalid');
     }
 
-    // Base URL for Cal.com API v2
-    const baseUrl = 'https://api.cal.com/v2';
+    // Base URL for Cal.com API v1 (changed from v2)
+    const baseUrl = 'https://api.cal.com/v1';
     let endpoint = baseUrl;
     let method = 'GET';
     let body;
@@ -48,15 +48,13 @@ serve(async (req) => {
       case 'check_availability': {
         if (!date) throw new Error('Date is required for availability check');
         
-        // Parse and validate the date
         let checkDate;
         try {
           if (date === 'tomorrow') {
-            checkDate = addMinutes(new Date(), 24 * 60); // Add 24 hours
+            checkDate = addMinutes(new Date(), 24 * 60);
           } else if (date === 'today') {
             checkDate = new Date();
           } else {
-            // Try to parse the date string
             checkDate = parseISO(date);
           }
 
@@ -67,13 +65,10 @@ serve(async (req) => {
           const start = startOfDay(checkDate);
           const end = endOfDay(checkDate);
           
-          endpoint = `${baseUrl}/availability`;
+          endpoint = `${baseUrl}/availability/${integration.config?.selected_calendar}`;
           const queryParams = new URLSearchParams({
-            startTime: start.toISOString(),
-            endTime: end.toISOString(),
-            ...(integration.config?.selected_calendar && {
-              eventTypeId: integration.config.selected_calendar
-            })
+            start: start.toISOString(),
+            end: end.toISOString(),
           });
           endpoint += `?${queryParams.toString()}`;
           console.log('Checking availability for:', format(checkDate, 'yyyy-MM-dd'));
@@ -88,7 +83,6 @@ serve(async (req) => {
         if (!date || !time) throw new Error('Date and time are required for scheduling');
         
         try {
-          // Ensure date is in yyyy-MM-dd format and time is in HH:mm format
           const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
           const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
 
@@ -100,20 +94,18 @@ serve(async (req) => {
             throw new Error('Time must be in HH:mm format');
           }
 
-          // Parse the date and time
           const scheduledDate = parseISO(`${date}T${time}`);
           if (isNaN(scheduledDate.getTime())) {
             throw new Error('Invalid date or time combination');
           }
 
-          endpoint = `${baseUrl}/bookings`;
+          endpoint = `${baseUrl}/bookings/${integration.config?.selected_calendar}`;
           method = 'POST';
           body = JSON.stringify({
-            eventTypeId: integration.config?.selected_calendar,
             start: scheduledDate.toISOString(),
-            end: addMinutes(scheduledDate, 30).toISOString(), // Adding 30 minutes by default
+            end: addMinutes(scheduledDate, 30).toISOString(),
             name: "Meeting scheduled via bot",
-            email: "user@example.com", // This should be replaced with actual user email
+            email: "user@example.com",
             timeZone: "UTC",
             language: "es",
           });
@@ -142,6 +134,7 @@ serve(async (req) => {
     });
 
     const responseText = await response.text();
+    console.log('Raw API response:', responseText);
     
     try {
       responseData = JSON.parse(responseText);
@@ -157,26 +150,17 @@ serve(async (req) => {
     }
 
     // Process the response based on the action
-    if (action === 'get_calendars' && responseData.data?.eventTypeGroups) {
-      const eventTypes = responseData.data.eventTypeGroups
-        .flatMap((group: any) => {
-          if (!group.eventTypes) return [];
-          return group.eventTypes.map((eventType: any) => ({
-            id: eventType.id.toString(),
-            name: eventType.title,
-            description: eventType.description,
-            length: eventType.length,
-            slug: eventType.slug,
-            hidden: eventType.hidden,
-            bookingFields: eventType.bookingFields,
-          }));
-        })
-        .filter((eventType: any) => !eventType.hidden);
+    if (action === 'get_calendars') {
+      const eventTypes = Array.isArray(responseData) ? responseData.map(eventType => ({
+        id: eventType.id.toString(),
+        name: eventType.title || eventType.name,
+        description: eventType.description,
+        length: eventType.length,
+      })) : [];
       
       console.log('Processed event types:', eventTypes);
       responseData = { eventTypes };
     } else if (action === 'check_availability') {
-      // Process availability data to make it more user-friendly
       const slots = responseData.busy || [];
       const availableSlots = [];
       const startTime = 9; // 9 AM
