@@ -5,6 +5,7 @@ export interface WhatsAppConnection {
   bot_id: string;
   phone_number: string | null;
   status: 'disconnected' | 'connecting' | 'connected';
+  session_data: any;
   created_at: string;
   updated_at: string;
 }
@@ -19,7 +20,7 @@ class WhatsAppService {
       }
 
       const response = await supabase.functions.invoke('whatsapp-init', {
-        body: { action: 'initialize', botId },
+        body: { botId },
         headers: {
           Authorization: `Bearer ${session.access_token}`
         }
@@ -45,7 +46,7 @@ class WhatsAppService {
       }
       
       const response = await supabase.functions.invoke('whatsapp-qr', {
-        body: { action: 'getQR', connectionId },
+        body: { connectionId },
         headers: {
           Authorization: `Bearer ${session.access_token}`
         }
@@ -70,7 +71,12 @@ class WhatsAppService {
         .eq('bot_id', botId);
 
       if (error) throw error;
-      return data;
+      
+      // Ensure the status is one of the allowed values
+      return data.map(conn => ({
+        ...conn,
+        status: (conn.status as 'disconnected' | 'connecting' | 'connected') || 'disconnected'
+      }));
     } catch (error) {
       console.error('Failed to get WhatsApp connections:', error);
       throw error;
@@ -81,12 +87,15 @@ class WhatsAppService {
     try {
       const { data, error } = await supabase
         .from('whatsapp_connections')
-        .insert([{ bot_id: botId }])
+        .insert([{ 
+          bot_id: botId,
+          status: 'disconnected' as const
+        }])
         .select()
         .single();
 
       if (error) throw error;
-      return data;
+      return data as WhatsAppConnection;
     } catch (error) {
       console.error('Failed to create WhatsApp connection:', error);
       throw error;

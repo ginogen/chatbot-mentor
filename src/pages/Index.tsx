@@ -24,7 +24,6 @@ const Index = () => {
 
   React.useEffect(() => {
     loadBots();
-    initializeWhatsApp();
     loadUserProfile();
     loadUserEmail();
   }, []);
@@ -54,6 +53,7 @@ const Index = () => {
       setBots(loadedBots);
       if (loadedBots.length > 0 && !selectedBot) {
         setSelectedBot(loadedBots[0].id);
+        await initializeWhatsApp(loadedBots[0].id);
       }
     } catch (error) {
       toast({
@@ -64,14 +64,15 @@ const Index = () => {
     }
   };
 
-  const initializeWhatsApp = async () => {
+  const initializeWhatsApp = async (botId: string) => {
     try {
-      await whatsappService.initialize();
+      await whatsappService.initialize(botId);
       toast({
         title: "WhatsApp Connection",
         description: "WhatsApp service initialized successfully",
       });
     } catch (error) {
+      console.error('WhatsApp initialization error:', error);
       toast({
         title: "Error",
         description: "Failed to connect to WhatsApp service. Please try again later.",
