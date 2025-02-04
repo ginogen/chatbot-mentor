@@ -1,10 +1,75 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { format, addMinutes, parseISO, startOfDay, endOfDay } from 'https://esm.sh/date-fns@2.30.0';
+import { format, addMinutes, parseISO, startOfDay, endOfDay, addDays, setHours, setMinutes, parse } from 'https://esm.sh/date-fns@2.30.0';
+import { es } from 'https://esm.sh/date-fns/locale@2.30.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+const parseNaturalDate = (dateStr: string): Date | null => {
+  const now = new Date();
+  dateStr = dateStr.toLowerCase().trim();
+
+  // Handle "mañana X am/pm"
+  if (dateStr.includes('mañana')) {
+    const tomorrow = addDays(now, 1);
+    const timeMatch = dateStr.match(/(\d{1,2})(?:\s*)?(?:am|pm)/);
+    if (timeMatch) {
+      let hours = parseInt(timeMatch[1]);
+      if (dateStr.includes('pm') && hours < 12) hours += 12;
+      return setHours(setMinutes(tomorrow, 0), hours);
+    }
+    return tomorrow;
+  }
+
+  // Handle "próximo [día]"
+  const weekdays = {
+    'lunes': 1, 'martes': 2, 'miércoles': 3, 'miercoles': 3,
+    'jueves': 4, 'viernes': 5, 'sábado': 6, 'sabado': 6, 'domingo': 0
+  };
+
+  for (const [day, value] of Object.entries(weekdays)) {
+    if (dateStr.includes(day)) {
+      let targetDate = now;
+      while (targetDate.getDay() !== value) {
+        targetDate = addDays(targetDate, 1);
+      }
+      const timeMatch = dateStr.match(/(\d{1,2})(?:\s*)?(?:am|pm)/);
+      if (timeMatch) {
+        let hours = parseInt(timeMatch[1]);
+        if (dateStr.includes('pm') && hours < 12) hours += 12;
+        return setHours(setMinutes(targetDate, 0), hours);
+      }
+      return targetDate;
+    }
+  }
+
+  // Handle specific dates like "6 de febrero"
+  const monthNames = {
+    'enero': 0, 'febrero': 1, 'marzo': 2, 'abril': 3, 'mayo': 4, 'junio': 5,
+    'julio': 6, 'agosto': 7, 'septiembre': 8, 'octubre': 9, 'noviembre': 10, 'diciembre': 11
+  };
+
+  for (const [month, value] of Object.entries(monthNames)) {
+    if (dateStr.includes(month)) {
+      const dayMatch = dateStr.match(/(\d{1,2})/);
+      if (dayMatch) {
+        const day = parseInt(dayMatch[1]);
+        const date = new Date(now.getFullYear(), value, day);
+        const timeMatch = dateStr.match(/(\d{1,2})(?:\s*)?(?:am|pm)/);
+        if (timeMatch) {
+          let hours = parseInt(timeMatch[1]);
+          if (dateStr.includes('pm') && hours < 12) hours += 12;
+          return setHours(setMinutes(date, 0), hours);
+        }
+        return date;
+      }
+    }
+  }
+
+  return null;
 };
 
 serve(async (req) => {
@@ -13,13 +78,13 @@ serve(async (req) => {
   }
 
   try {
-    const { action, botId, date, time } = await req.json();
+    const { action, botId, date: rawDate, time } = await req.json();
+    console.log('Received request:', { action, botId, rawDate, time });
     
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get Cal.com integration for the bot
     const { data: integration, error: integrationError } = await supabase
       .from('bot_integrations')
       .select('*')
@@ -32,7 +97,6 @@ serve(async (req) => {
       throw new Error('Cal.com integration not found or invalid');
     }
 
-    // Base URL for Cal.com API v1 (changed from v2)
     const baseUrl = 'https://api.cal.com/v1';
     let endpoint = baseUrl;
     let method = 'GET';
@@ -46,75 +110,48 @@ serve(async (req) => {
         break;
 
       case 'check_availability': {
-        if (!date) throw new Error('Date is required for availability check');
+        if (!rawDate) throw new Error('Date is required for availability check');
         
-        let checkDate;
-        try {
-          if (date === 'tomorrow') {
-            checkDate = addMinutes(new Date(), 24 * 60);
-          } else if (date === 'today') {
-            checkDate = new Date();
-          } else {
-            checkDate = parseISO(date);
-          }
-
-          if (isNaN(checkDate.getTime())) {
-            throw new Error('Invalid date value');
-          }
-
-          const start = startOfDay(checkDate);
-          const end = endOfDay(checkDate);
-          
-          endpoint = `${baseUrl}/availability/${integration.config?.selected_calendar}`;
-          const queryParams = new URLSearchParams({
-            start: start.toISOString(),
-            end: end.toISOString(),
-          });
-          endpoint += `?${queryParams.toString()}`;
-          console.log('Checking availability for:', format(checkDate, 'yyyy-MM-dd'));
-        } catch (error) {
-          console.error('Date parsing error:', error);
-          throw new Error('Invalid date format provided');
+        const parsedDate = parseNaturalDate(rawDate);
+        if (!parsedDate) {
+          throw new Error('No se pudo interpretar la fecha proporcionada');
         }
+
+        console.log('Parsed date:', parsedDate);
+        
+        const start = startOfDay(parsedDate);
+        const end = endOfDay(parsedDate);
+        
+        endpoint = `${baseUrl}/availability/${integration.config?.selected_calendar}`;
+        const queryParams = new URLSearchParams({
+          start: start.toISOString(),
+          end: end.toISOString(),
+        });
+        endpoint += `?${queryParams.toString()}`;
+        console.log('Checking availability for:', format(parsedDate, 'yyyy-MM-dd'));
         break;
       }
 
       case 'schedule': {
-        if (!date || !time) throw new Error('Date and time are required for scheduling');
+        if (!rawDate) throw new Error('Date and time are required for scheduling');
         
-        try {
-          const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-          const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
-
-          if (!dateRegex.test(date)) {
-            throw new Error('Date must be in yyyy-MM-dd format');
-          }
-
-          if (!timeRegex.test(time)) {
-            throw new Error('Time must be in HH:mm format');
-          }
-
-          const scheduledDate = parseISO(`${date}T${time}`);
-          if (isNaN(scheduledDate.getTime())) {
-            throw new Error('Invalid date or time combination');
-          }
-
-          endpoint = `${baseUrl}/bookings/${integration.config?.selected_calendar}`;
-          method = 'POST';
-          body = JSON.stringify({
-            start: scheduledDate.toISOString(),
-            end: addMinutes(scheduledDate, 30).toISOString(),
-            name: "Meeting scheduled via bot",
-            email: "user@example.com",
-            timeZone: "UTC",
-            language: "es",
-          });
-
-          console.log('Scheduling meeting for:', format(scheduledDate, 'yyyy-MM-dd HH:mm'));
-        } catch (error) {
-          console.error('Date/time parsing error:', error);
-          throw new Error(`Invalid date or time format: ${error.message}`);
+        const parsedDate = parseNaturalDate(rawDate);
+        if (!parsedDate) {
+          throw new Error('No se pudo interpretar la fecha proporcionada');
         }
+
+        endpoint = `${baseUrl}/bookings/${integration.config?.selected_calendar}`;
+        method = 'POST';
+        body = JSON.stringify({
+          start: parsedDate.toISOString(),
+          end: addMinutes(parsedDate, 30).toISOString(),
+          name: "Meeting scheduled via bot",
+          email: "user@example.com",
+          timeZone: "UTC",
+          language: "es",
+        });
+
+        console.log('Scheduling meeting for:', format(parsedDate, 'yyyy-MM-dd HH:mm'));
         break;
       }
 
@@ -149,7 +186,6 @@ serve(async (req) => {
       throw new Error(`Cal.com API error: ${responseData.message || response.statusText}`);
     }
 
-    // Process the response based on the action
     if (action === 'get_calendars') {
       const eventTypes = Array.isArray(responseData) ? responseData.map(eventType => ({
         id: eventType.id.toString(),
@@ -179,7 +215,7 @@ serve(async (req) => {
       }
 
       responseData = { 
-        date: format(parseISO(date), 'yyyy-MM-dd'),
+        date: format(parseNaturalDate(rawDate)!, 'yyyy-MM-dd'),
         availableSlots 
       };
     }
