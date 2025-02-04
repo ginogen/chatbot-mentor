@@ -46,28 +46,40 @@ serve(async (req) => {
       throw new Error(`Failed to fetch bot training data: ${trainingError.message}`);
     }
 
-    // Get training documents
+    // Get processed training documents
     const { data: documents, error: documentsError } = await supabase
       .from('training_documents')
       .select('*')
-      .eq('bot_id', botId);
+      .eq('bot_id', botId)
+      .eq('processed_status', 'completed');
 
     if (documentsError) {
       console.error('Error fetching documents:', documentsError);
       throw new Error(`Failed to fetch training documents: ${documentsError.message}`);
     }
 
+    // Prepare document content for context
+    let documentContext = '';
+    if (documents && documents.length > 0) {
+      documentContext = documents
+        .filter(doc => doc.content)
+        .map(doc => `Content from ${doc.file_name}:\n${doc.content}\n---\n`)
+        .join('\n');
+    }
+
     // Use default prompts if no training data exists
     const contextPrompt = trainingData?.context_prompt || 'You are a helpful assistant.';
     const negativePrompt = trainingData?.negative_prompt || '';
+    const temperature = trainingData?.temperature || 0.7;
 
     const systemPrompt = `
       ${contextPrompt}
       ${negativePrompt ? `\nDO NOT: ${negativePrompt}` : ''}
-      ${documents?.length ? '\nReference documents available: ' + documents.map(d => d.file_name).join(', ') : ''}
+      ${documentContext ? '\nReference the following documents when relevant:\n' + documentContext : ''}
+      Base your responses on the provided context and documents when applicable.
     `.trim();
 
-    console.log('Sending request to OpenAI with system prompt:', systemPrompt);
+    console.log('Sending request to OpenAI with system prompt and temperature:', temperature);
 
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -81,6 +93,7 @@ serve(async (req) => {
           { role: 'system', content: systemPrompt },
           { role: 'user', content: message }
         ],
+        temperature: temperature,
       }),
     });
 
