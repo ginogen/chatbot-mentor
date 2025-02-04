@@ -26,14 +26,7 @@ export function IntegrationsView({ botId }: IntegrationsViewProps) {
       description: "Schedule meetings directly through your bot",
       icon: Calendar,
       service: "cal" as IntegrationService,
-      authUrl: "https://cal.com/oauth",
-    },
-    {
-      name: "Calendly",
-      description: "Automate meeting scheduling with Calendly",
-      icon: Calendar,
-      service: "calendly" as IntegrationService,
-      authUrl: "https://auth.calendly.com/oauth/authorize",
+      authUrl: "https://app.cal.com/oauth/authorize",
     },
     {
       name: "MercadoPago",
@@ -41,13 +34,6 @@ export function IntegrationsView({ botId }: IntegrationsViewProps) {
       icon: CreditCard,
       service: "mercadopago" as IntegrationService,
       authUrl: "https://auth.mercadopago.com/authorization",
-    },
-    {
-      name: "PayPal",
-      description: "Process payments with PayPal",
-      icon: CreditCard,
-      service: "paypal" as IntegrationService,
-      authUrl: "https://www.paypal.com/connect",
     },
   ];
 
@@ -143,7 +129,7 @@ export function IntegrationsView({ botId }: IntegrationsViewProps) {
       <div className="p-6 space-y-6">
         <h1 className="text-2xl font-bold">Integrations</h1>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {[1, 2, 3, 4].map((i) => (
+          {[1, 2].map((i) => (
             <Card key={i} className="p-6">
               <Skeleton className="h-24 w-full" />
             </Card>
