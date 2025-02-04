@@ -1,5 +1,5 @@
-import { serve } from 'https://deno.fresh.dev/std@v1/http/server.ts';
-import { Client } from 'npm:whatsapp-web.js';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { Client } from "npm:whatsapp-web.js";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,8 +15,6 @@ serve(async (req) => {
     const client = new Client({});
     
     client.on('qr', (qr) => {
-      // Store QR code for later retrieval
-      // You might want to store this in Supabase database
       console.log('QR RECEIVED', qr);
     });
 

@@ -6,6 +6,8 @@ export interface Bot {
   status: "active" | "inactive";
   whatsapp_status: "disconnected" | "connecting" | "connected";
   user_id: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export const botService = {
@@ -17,15 +19,15 @@ export const botService = {
         { 
           name,
           user_id: user?.id,
-          status: 'inactive',
-          whatsapp_status: 'disconnected'
+          status: 'inactive' as const,
+          whatsapp_status: 'disconnected' as const
         }
       ])
       .select()
       .single();
 
     if (error) throw error;
-    return data;
+    return data as Bot;
   },
 
   async getBots(): Promise<Bot[]> {
@@ -35,7 +37,7 @@ export const botService = {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    return (data || []) as Bot[];
   },
 
   async updateBotStatus(
