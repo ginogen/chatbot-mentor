@@ -11,6 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/components/ui/use-toast";
 import { Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { Database } from "@/integrations/supabase/types";
 
 interface Message {
   role: "user" | "assistant";
@@ -22,11 +23,9 @@ interface CalendarConfig {
   calendar_name?: string;
 }
 
-interface CalendarIntegration {
-  id: string;
-  bot_id: string;
-  service_name: string;
-  status: string;
+type BotIntegration = Database['public']['Tables']['bot_integrations']['Row'];
+
+interface CalendarIntegration extends Omit<BotIntegration, 'config'> {
   config: CalendarConfig | null;
 }
 
@@ -67,14 +66,21 @@ export const PreviewChat = ({
 
       if (error) throw error;
 
-      // Verificar si la integración está completamente configurada
-      const isConfigured = integration && 
-                          integration.status === 'connected' && 
-                          integration.config?.selected_calendar;
+      if (integration) {
+        const config = integration.config as CalendarConfig | null;
+        const calIntegration: CalendarIntegration = {
+          ...integration,
+          config
+        };
 
-      setIsCalendarConfigured(!!isConfigured);
-      setCalendarIntegration(integration);
+        // Verificar si la integración está completamente configurada
+        const isConfigured = calIntegration && 
+                          calIntegration.status === 'connected' && 
+                          calIntegration.config?.selected_calendar;
 
+        setIsCalendarConfigured(!!isConfigured);
+        setCalendarIntegration(calIntegration);
+      }
     } catch (error) {
       console.error('Error fetching calendar integration:', error);
       setIsCalendarConfigured(false);
