@@ -12,6 +12,7 @@ export type Database = {
       bot_integrations: {
         Row: {
           access_token: string | null
+          api_key: string | null
           bot_id: string | null
           client_id: string | null
           client_secret: string | null
@@ -27,6 +28,7 @@ export type Database = {
         }
         Insert: {
           access_token?: string | null
+          api_key?: string | null
           bot_id?: string | null
           client_id?: string | null
           client_secret?: string | null
@@ -42,6 +44,7 @@ export type Database = {
         }
         Update: {
           access_token?: string | null
+          api_key?: string | null
           bot_id?: string | null
           client_id?: string | null
           client_secret?: string | null

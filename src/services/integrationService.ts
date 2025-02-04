@@ -16,11 +16,13 @@ export interface Integration {
   refresh_token: string | null;
   token_expires_at: string | null;
   config: Record<string, any> | null;
+  api_key: string | null;
 }
 
 export interface IntegrationCredentials {
-  client_id: string;
-  client_secret: string;
+  client_id?: string;
+  client_secret?: string;
+  api_key?: string;
 }
 
 export const integrationService = {
@@ -45,8 +47,9 @@ export const integrationService = {
         {
           bot_id: botId,
           service_name: service,
-          client_id: credentials.client_id,
-          client_secret: credentials.client_secret,
+          client_id: credentials.client_id || null,
+          client_secret: credentials.client_secret || null,
+          api_key: credentials.api_key || null,
           status: "connected",
         },
         { onConflict: "bot_id,service_name" }
@@ -67,7 +70,8 @@ export const integrationService = {
         client_secret: null,
         access_token: null,
         refresh_token: null,
-        token_expires_at: null
+        token_expires_at: null,
+        api_key: null
       })
       .eq("bot_id", botId)
       .eq("service_name", service);

@@ -30,10 +30,7 @@ export function IntegrationsView({ botId }: IntegrationsViewProps) {
   const [connecting, setConnecting] = useState(false);
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [selectedService, setSelectedService] = useState<IntegrationService | null>(null);
-  const [credentials, setCredentials] = useState({
-    client_id: "",
-    client_secret: "",
-  });
+  const [apiKey, setApiKey] = useState("");
 
   const integrationConfigs = [
     {
@@ -42,10 +39,9 @@ export function IntegrationsView({ botId }: IntegrationsViewProps) {
       icon: Calendar,
       service: "cal" as IntegrationService,
       fields: {
-        client_id: "Client ID",
-        client_secret: "Client Secret",
+        api_key: "API Key",
       },
-      helpText: "You can find your credentials in your Cal.com account settings under API Keys.",
+      helpText: "You can find your API key in your Cal.com account settings under Developer Settings -> API Keys.",
     },
     {
       name: "MercadoPago",
@@ -83,16 +79,28 @@ export function IntegrationsView({ botId }: IntegrationsViewProps) {
   const handleConnect = async (service: IntegrationService) => {
     setConnecting(true);
     try {
-      await integrationService.connectIntegration(botId, service, credentials);
-      await loadIntegrations();
-      
       const config = integrationConfigs.find((c) => c.service === service);
+      if (!config) throw new Error("Invalid service");
+
+      if (service === "cal") {
+        await integrationService.connectIntegration(botId, service, {
+          api_key: apiKey,
+        });
+      } else {
+        // Handle other services with client_id/client_secret
+        await integrationService.connectIntegration(botId, service, {
+          client_id: "",
+          client_secret: "",
+        });
+      }
+      
+      await loadIntegrations();
       toast({
         title: "Success",
-        description: `Connected to ${config?.name} successfully.`,
+        description: `Connected to ${config.name} successfully.`,
       });
       setSelectedService(null);
-      setCredentials({ client_id: "", client_secret: "" });
+      setApiKey("");
     } catch (error) {
       console.error("Failed to connect:", error);
       toast({
@@ -193,7 +201,7 @@ export function IntegrationsView({ botId }: IntegrationsViewProps) {
                   <Dialog open={selectedService === integration.service} onOpenChange={(open) => {
                     if (!open) {
                       setSelectedService(null);
-                      setCredentials({ client_id: "", client_secret: "" });
+                      setApiKey("");
                     }
                   }}>
                     <DialogTrigger asChild>
@@ -214,38 +222,33 @@ export function IntegrationsView({ botId }: IntegrationsViewProps) {
                           {integration.helpText}
                         </p>
                         <div className="space-y-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="client_id">Client ID</Label>
-                            <Input
-                              id="client_id"
-                              value={credentials.client_id}
-                              onChange={(e) =>
-                                setCredentials({
-                                  ...credentials,
-                                  client_id: e.target.value,
-                                })
-                              }
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="client_secret">Client Secret</Label>
-                            <Input
-                              id="client_secret"
-                              type="password"
-                              value={credentials.client_secret}
-                              onChange={(e) =>
-                                setCredentials({
-                                  ...credentials,
-                                  client_secret: e.target.value,
-                                })
-                              }
-                            />
-                          </div>
+                          {integration.service === "cal" ? (
+                            <div className="space-y-2">
+                              <Label htmlFor="api_key">API Key</Label>
+                              <Input
+                                id="api_key"
+                                type="password"
+                                value={apiKey}
+                                onChange={(e) => setApiKey(e.target.value)}
+                              />
+                            </div>
+                          ) : (
+                            // Keep existing client_id/client_secret fields for other services
+                            Object.entries(integration.fields).map(([key, label]) => (
+                              <div key={key} className="space-y-2">
+                                <Label htmlFor={key}>{label}</Label>
+                                <Input
+                                  id={key}
+                                  type={key.includes("secret") ? "password" : "text"}
+                                />
+                              </div>
+                            ))
+                          )}
                         </div>
                         <Button
                           className="w-full"
                           onClick={() => handleConnect(integration.service)}
-                          disabled={connecting || !credentials.client_id || !credentials.client_secret}
+                          disabled={connecting || (integration.service === "cal" ? !apiKey : false)}
                         >
                           {connecting ? "Connecting..." : "Connect"}
                         </Button>
