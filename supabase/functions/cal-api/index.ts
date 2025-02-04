@@ -146,6 +146,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Get integration details
     const { data: integration, error: integrationError } = await supabase
       .from('bot_integrations')
       .select('*')
@@ -153,10 +154,22 @@ serve(async (req) => {
       .eq('service_name', 'cal')
       .maybeSingle();
 
-    if (integrationError || !integration?.api_key) {
+    if (integrationError) {
       console.error('Integration error:', integrationError);
       throw new Error('Cal.com integration not found or invalid');
     }
+
+    if (!integration?.api_key) {
+      console.error('No API key found for integration:', integration);
+      throw new Error('Cal.com API key not configured');
+    }
+
+    console.log('Using Cal.com integration:', {
+      id: integration.id,
+      status: integration.status,
+      hasApiKey: !!integration.api_key,
+      config: integration.config
+    });
 
     const baseUrl = 'https://api.cal.com/v1';
     let endpoint = baseUrl;
@@ -229,6 +242,7 @@ serve(async (req) => {
 
     console.log(`Making ${method} request to ${endpoint}`);
 
+    // Make request to Cal.com API
     const response = await fetch(endpoint, {
       method,
       headers: {
@@ -238,13 +252,17 @@ serve(async (req) => {
       body: method === 'POST' ? body : undefined,
     });
 
+    // Log response status and headers for debugging
+    console.log('Cal.com API response status:', response.status);
+    console.log('Cal.com API response headers:', Object.fromEntries(response.headers.entries()));
+
     if (!response.ok) {
+      const errorText = await response.text();
       console.error('Cal.com API error:', {
         status: response.status,
         statusText: response.statusText,
+        body: errorText
       });
-      const errorText = await response.text();
-      console.error('Error response body:', errorText);
       throw new Error(`Cal.com API error: ${response.statusText}`);
     }
 
@@ -253,7 +271,7 @@ serve(async (req) => {
     
     try {
       responseData = JSON.parse(responseText);
-      console.log('Cal.com API response:', responseData);
+      console.log('Parsed API response:', responseData);
     } catch (e) {
       console.error('Failed to parse response:', responseText);
       throw new Error('Invalid response from Cal.com API');
