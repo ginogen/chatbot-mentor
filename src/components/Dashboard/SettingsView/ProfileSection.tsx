@@ -26,9 +26,11 @@ export function ProfileSection() {
 
   const loadUserData = async () => {
     try {
-      // Get user email
+      // Get user email and ID
       const { data: { user } } = await supabase.auth.getUser();
-      if (user?.email) {
+      if (!user) throw new Error("No authenticated user found");
+      
+      if (user.email) {
         setEmail(user.email);
       }
 
@@ -36,7 +38,7 @@ export function ProfileSection() {
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("first_name")
-        .eq('id', user?.id)
+        .eq('id', user.id)
         .maybeSingle();
       
       if (profileError) throw profileError;
@@ -47,7 +49,7 @@ export function ProfileSection() {
 
       // Get user role
       const { data: roleData } = await supabase.rpc('get_highest_role', {
-        user_id: user?.id
+        user_id: user.id
       });
       
       if (roleData) {
