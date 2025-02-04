@@ -1,4 +1,4 @@
-import { Bot, MessageSquare, Plug, BarChart } from "lucide-react";
+import { Bot, MessageSquare, Plug, BarChart, Calendar, CreditCard } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -11,12 +11,12 @@ import {
 } from "@/components/ui/sidebar";
 
 interface BotSidebarProps {
-  currentView: "metrics" | "train" | "chat" | "connect";
-  onViewChange: (view: "metrics" | "train" | "chat" | "connect") => void;
+  currentView: "metrics" | "train" | "chat" | "connect" | "integrations";
+  onViewChange: (view: "metrics" | "train" | "chat" | "connect" | "integrations") => void;
 }
 
 export function BotSidebar({ currentView, onViewChange }: BotSidebarProps) {
-  const items = [
+  const mainItems = [
     {
       title: "Metrics",
       icon: BarChart,
@@ -39,6 +39,35 @@ export function BotSidebar({ currentView, onViewChange }: BotSidebarProps) {
     },
   ];
 
+  const integrationItems = [
+    {
+      title: "Cal.com",
+      icon: Calendar,
+      service: "cal",
+    },
+    {
+      title: "Calendly",
+      icon: Calendar,
+      service: "calendly",
+    },
+    {
+      title: "MercadoPago",
+      icon: CreditCard,
+      service: "mercadopago",
+    },
+    {
+      title: "PayPal",
+      icon: CreditCard,
+      service: "paypal",
+    },
+  ];
+
+  const handleIntegrationClick = (service: string) => {
+    onViewChange("integrations");
+    // We'll implement the connection logic later
+    console.log(`Connecting to ${service}`);
+  };
+
   return (
     <Sidebar>
       <SidebarContent>
@@ -46,11 +75,30 @@ export function BotSidebar({ currentView, onViewChange }: BotSidebarProps) {
           <SidebarGroupLabel>Bot Management</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
+              {mainItems.map((item) => (
                 <SidebarMenuItem key={item.value}>
                   <SidebarMenuButton
                     onClick={() => onViewChange(item.value)}
                     className={currentView === item.value ? "bg-muted" : ""}
+                  >
+                    <item.icon className="w-4 h-4 mr-2" />
+                    <span>{item.title}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Integrations</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {integrationItems.map((item) => (
+                <SidebarMenuItem key={item.service}>
+                  <SidebarMenuButton
+                    onClick={() => handleIntegrationClick(item.service)}
+                    className={currentView === "integrations" ? "bg-muted" : ""}
                   >
                     <item.icon className="w-4 h-4 mr-2" />
                     <span>{item.title}</span>

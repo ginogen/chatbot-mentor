@@ -5,13 +5,14 @@ import { BotSidebar } from "@/components/Dashboard/BotSidebar";
 import { TrainBotView } from "@/components/Dashboard/TrainBotView";
 import { LiveChatView } from "@/components/Dashboard/LiveChatView";
 import { ConnectView } from "@/components/Dashboard/ConnectView";
+import { IntegrationsView } from "@/components/Dashboard/IntegrationsView";
 import { PreviewChat } from "@/components/Dashboard/PreviewChat";
 import { Eye } from "lucide-react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 
 const BotDashboard = () => {
   const { botId } = useParams();
-  const [activeTab, setActiveTab] = useState<"metrics" | "train" | "chat" | "connect">("train");
+  const [activeTab, setActiveTab] = useState<"metrics" | "train" | "chat" | "connect" | "integrations">("train");
   const [isPreviewChatOpen, setIsPreviewChatOpen] = useState(false);
 
   if (!botId) return null;
@@ -30,6 +31,9 @@ const BotDashboard = () => {
             </TabsContent>
             <TabsContent value="chat" className="h-full m-0">
               <LiveChatView botId={botId} />
+            </TabsContent>
+            <TabsContent value="integrations" className="h-full m-0">
+              <IntegrationsView botId={botId} />
             </TabsContent>
           </Tabs>
 
