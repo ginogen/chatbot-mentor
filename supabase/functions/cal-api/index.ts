@@ -31,23 +31,24 @@ serve(async (req) => {
       throw new Error('Cal.com integration not found or invalid');
     }
 
-    // Base URL for Cal.com API
-    const baseUrl = 'https://api.cal.com/v1';
+    // Base URL for Cal.com API v2
+    const baseUrl = 'https://api.cal.com/v2';
     let endpoint = baseUrl;
     let method = 'GET';
     let body;
     
     switch (action) {
       case 'get_calendars':
-        endpoint = `${baseUrl}/calendars`;
+        endpoint = `${baseUrl}/event-types`;
         break;
       case 'check_availability':
         if (!date) throw new Error('Date is required for availability check');
-        endpoint = `${baseUrl}/availability`;
+        endpoint = `${baseUrl}/schedules`;
         const queryParams = new URLSearchParams({
-          date,
+          startTime: `${date}T00:00:00Z`,
+          endTime: `${date}T23:59:59Z`,
           ...(integration.config?.selected_calendar && {
-            calendarId: integration.config.selected_calendar
+            eventTypeId: integration.config.selected_calendar
           })
         });
         endpoint += `?${queryParams.toString()}`;
@@ -57,10 +58,13 @@ serve(async (req) => {
         endpoint = `${baseUrl}/bookings`;
         method = 'POST';
         body = JSON.stringify({
-          start: `${date}T${time}`,
-          end: `${date}T${time}:00.000Z`, // Adding proper time format
-          title: "Meeting scheduled via bot",
-          calendarId: integration.config?.selected_calendar,
+          eventTypeId: integration.config?.selected_calendar,
+          start: `${date}T${time}:00.000Z`,
+          end: `${date}T${time}:30:00.000Z`, // Adding 30 minutes by default
+          name: "Meeting scheduled via bot",
+          email: "user@example.com", // This should be replaced with actual user email
+          timeZone: "UTC",
+          language: "es",
         });
         break;
       default:
