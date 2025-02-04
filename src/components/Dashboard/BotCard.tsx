@@ -53,7 +53,7 @@ export const BotCard = ({
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
               <Bot className="w-5 h-5 text-primary" />
             </div>
-            <h3 className="font-semibold text-base text-white group-hover:text-primary transition-colors">{name}</h3>
+            <h3 className="font-semibold text-base text-white/90 group-hover:text-primary transition-colors">{name}</h3>
           </div>
           <Button
             variant="ghost"
@@ -64,7 +64,7 @@ export const BotCard = ({
               setIsPreviewChatOpen(true);
             }}
           >
-            <Eye className="w-4 h-4" />
+            <Eye className="w-4 h-4 text-white/80" />
           </Button>
         </div>
 

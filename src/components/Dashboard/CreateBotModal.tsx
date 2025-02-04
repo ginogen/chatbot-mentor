@@ -40,18 +40,19 @@ export const CreateBotModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="glass-effect">
         <DialogHeader>
-          <DialogTitle>Create New Bot</DialogTitle>
+          <DialogTitle className="text-white">Create New Bot</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Bot Name</Label>
+            <Label htmlFor="name" className="text-white/90">Bot Name</Label>
             <Input
               id="name"
               placeholder="Enter bot name..."
               value={botName}
               onChange={(e) => setBotName(e.target.value)}
+              className="bg-white/5 border-white/10 text-white placeholder:text-white/50"
             />
           </div>
           <Button onClick={handleCreate} className="w-full">

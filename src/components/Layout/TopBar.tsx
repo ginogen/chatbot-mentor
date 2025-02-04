@@ -13,13 +13,13 @@ export const TopBar = ({ userDisplayName, onLogout }: TopBarProps) => {
         <div className="p-2 rounded-full bg-primary/10">
           <User className="w-5 h-5 text-primary" />
         </div>
-        <span className="text-white/90">{userDisplayName}</span>
+        <span className="text-white/90 font-medium">{userDisplayName}</span>
       </div>
       <Button 
         variant="ghost" 
         size="sm" 
         onClick={onLogout}
-        className="hover:bg-white/5"
+        className="hover:bg-white/5 text-white/80 hover:text-white"
       >
         <LogOut className="w-4 h-4 mr-2" />
         Sign Out

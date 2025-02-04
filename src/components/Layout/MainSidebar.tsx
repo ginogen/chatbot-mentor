@@ -51,7 +51,7 @@ export const MainSidebar = ({
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={onTrainMenuToggle}
-              className="nav-item"
+              className="nav-item text-white/90"
             >
               <div className="flex items-center">
                 <Bot className="icon" />
@@ -64,7 +64,7 @@ export const MainSidebar = ({
                   variant="ghost"
                   size="sm"
                   onClick={onCreateBot}
-                  className="w-full justify-start text-sm mb-2 hover:bg-white/5"
+                  className="w-full justify-start text-sm mb-2 hover:bg-white/5 text-white/80 hover:text-white"
                 >
                   + Add Bot
                 </Button>
@@ -75,7 +75,7 @@ export const MainSidebar = ({
                         onBotSelect(bot.id);
                         onViewSelect("train");
                       }}
-                      className={`nav-item ${selectedBot === bot.id && selectedView === "train" ? "active" : ""}`}
+                      className={`nav-item text-white/80 hover:text-white ${selectedBot === bot.id && selectedView === "train" ? "active" : ""}`}
                     >
                       {bot.name}
                     </SidebarMenuSubButton>
@@ -89,7 +89,7 @@ export const MainSidebar = ({
             <SidebarMenuItem key={item.id}>
               <SidebarMenuButton
                 onClick={() => onViewSelect(item.id)}
-                className={`nav-item ${selectedView === item.id ? "active" : ""}`}
+                className={`nav-item text-white/80 hover:text-white ${selectedView === item.id ? "active" : ""}`}
               >
                 <item.icon className="icon" />
                 <span>{item.label}</span>
