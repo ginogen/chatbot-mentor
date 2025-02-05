@@ -23,7 +23,6 @@ class WhatsAppService {
 
       if (error) throw error;
       
-      // Ensure the status is one of the allowed values
       return (data || []).map(conn => ({
         ...conn,
         status: this.normalizeStatus(conn.status)
@@ -91,7 +90,7 @@ class WhatsAppService {
       const { error: functionError } = await supabase.functions.invoke('whatsapp-init', {
         body: { connectionId },
         headers: {
-          Authorization: `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${session.access_token}`
         }
       });
 
