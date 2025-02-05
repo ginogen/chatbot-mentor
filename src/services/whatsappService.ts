@@ -8,9 +8,9 @@ export interface WhatsAppConnection {
   session_data: any;
   created_at: string;
   updated_at: string;
-  twilio_phone_sid: string | null;
-  twilio_status: string;
   monthly_cost: number;
+  whatsapp_business_phone_number: string | null;
+  display_phone_number: string | null;
 }
 
 class WhatsAppService {
@@ -23,10 +23,7 @@ class WhatsAppService {
 
       if (error) throw error;
       
-      return (data || []).map(conn => ({
-        ...conn,
-        status: (conn.status as WhatsAppConnection['status']) || 'disconnected'
-      }));
+      return data || [];
     } catch (error) {
       console.error('Failed to get WhatsApp connections:', error);
       throw error;
@@ -39,17 +36,14 @@ class WhatsAppService {
         .from('whatsapp_connections')
         .insert([{ 
           bot_id: botId,
-          status: 'disconnected' as const
+          status: 'disconnected' as const,
+          monthly_cost: 0
         }])
         .select()
         .single();
 
       if (error) throw error;
-      
-      return {
-        ...data,
-        status: (data.status as WhatsAppConnection['status']) || 'disconnected'
-      };
+      return data;
     } catch (error) {
       console.error('Failed to create WhatsApp connection:', error);
       throw error;
@@ -70,18 +64,22 @@ class WhatsAppService {
     }
   }
 
-  async listAvailableNumbers(countryCode: string = 'US'): Promise<any[]> {
-    const { data, error } = await supabase.functions.invoke('twilio-api', {
-      body: { action: 'list-available-numbers', countryCode }
+  async listAvailableNumbers(): Promise<any[]> {
+    const { data, error } = await supabase.functions.invoke('whatsapp-business-api', {
+      body: { action: 'list-available-numbers' }
     });
 
     if (error) throw error;
-    return data.numbers;
+    return data.numbers || [];
   }
 
-  async purchaseNumber(connectionId: string): Promise<void> {
-    const { error } = await supabase.functions.invoke('twilio-api', {
-      body: { action: 'purchase-number', connectionId }
+  async connectNumber(connectionId: string, phoneNumber: string): Promise<void> {
+    const { error } = await supabase.functions.invoke('whatsapp-business-api', {
+      body: { 
+        action: 'connect-number',
+        connectionId,
+        phoneNumber
+      }
     });
 
     if (error) throw error;
