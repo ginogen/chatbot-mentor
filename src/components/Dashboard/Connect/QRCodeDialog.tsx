@@ -4,54 +4,76 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
+import { Loader2, QrCode } from "lucide-react";
+import { WhatsAppConnection } from "@/services/whatsappService";
 
 interface QRCodeDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  botId: string;
+  connection: WhatsAppConnection;
+  onInitialize: (connectionId: string) => Promise<void>;
+  isInitializing: boolean;
 }
 
-export const QRCodeDialog = ({ isOpen, onClose, botId }: QRCodeDialogProps) => {
-  const [qrCode, setQrCode] = useState<string | null>(null);
+export function QRCodeDialog({ 
+  connection,
+  onInitialize,
+  isInitializing 
+}: QRCodeDialogProps) {
+  const [isOpen, setIsOpen] = useState(false);
 
-  const { data: connection, isLoading } = useQuery({
-    queryKey: ["whatsapp-connection", botId],
+  const { data: qrData, isLoading } = useQuery({
+    queryKey: ["whatsapp-qr", connection.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("whatsapp_connections")
         .select("qr_code, status")
-        .eq("bot_id", botId)
+        .eq("id", connection.id)
         .single();
 
       if (error) throw error;
       return data;
     },
-    refetchInterval: 3000, // Poll every 3 seconds
+    refetchInterval: connection.status === "connecting" ? 3000 : false,
+    enabled: isOpen,
   });
 
   useEffect(() => {
-    if (connection?.status === "connected") {
-      onClose();
+    if (qrData?.status === "connected") {
+      setIsOpen(false);
     }
-  }, [connection?.status, onClose]);
+  }, [qrData?.status]);
+
+  const handleInitialize = async () => {
+    await onInitialize(connection.id);
+  };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={handleInitialize}
+          disabled={isInitializing}
+        >
+          <QrCode className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Conectar WhatsApp</DialogTitle>
         </DialogHeader>
         <div className="flex flex-col items-center justify-center p-6">
-          {isLoading ? (
+          {isLoading || isInitializing ? (
             <Loader2 className="h-8 w-8 animate-spin" />
-          ) : connection?.qr_code ? (
+          ) : qrData?.qr_code ? (
             <>
               <img
-                src={connection.qr_code}
+                src={qrData.qr_code}
                 alt="WhatsApp QR Code"
                 className="w-64 h-64"
               />
@@ -68,4 +90,4 @@ export const QRCodeDialog = ({ isOpen, onClose, botId }: QRCodeDialogProps) => {
       </DialogContent>
     </Dialog>
   );
-};
+}
