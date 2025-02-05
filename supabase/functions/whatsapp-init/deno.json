@@ -1,6 +1,8 @@
 {
   "imports": {
-    "https://deno.land/std/": "https://deno.land/std@0.168.0/",
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.38.0"
+    "@whiskeysockets/baileys": "https://esm.sh/@whiskeysockets/baileys@6.5.0",
+    "@hapi/boom": "https://esm.sh/@hapi/boom@10.0.1",
+    "qrcode": "https://esm.sh/qrcode@1.5.3",
+    "pino": "https://esm.sh/pino@8.15.0"
   }
 }
