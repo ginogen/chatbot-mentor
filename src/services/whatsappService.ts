@@ -8,9 +8,8 @@ export interface WhatsAppConnection {
   session_data: any;
   created_at: string;
   updated_at: string;
-  monthly_cost: number;
-  whatsapp_business_phone_number: string | null;
-  display_phone_number: string | null;
+  qr_code: string | null;
+  qr_code_timestamp: string | null;
 }
 
 class WhatsAppService {
@@ -22,7 +21,6 @@ class WhatsAppService {
         .eq('bot_id', botId);
 
       if (error) throw error;
-      
       return data || [];
     } catch (error) {
       console.error('Failed to get WhatsApp connections:', error);
@@ -36,8 +34,7 @@ class WhatsAppService {
         .from('whatsapp_connections')
         .insert([{ 
           bot_id: botId,
-          status: 'disconnected' as const,
-          monthly_cost: 0
+          status: 'disconnected' as const
         }])
         .select()
         .single();
@@ -64,25 +61,21 @@ class WhatsAppService {
     }
   }
 
-  async listAvailableNumbers(): Promise<any[]> {
-    const { data, error } = await supabase.functions.invoke('whatsapp-business-api', {
-      body: { action: 'list-available-numbers' }
+  async initializeWhatsApp(connectionId: string): Promise<void> {
+    const { error } = await supabase.functions.invoke('whatsapp-init', {
+      body: { connectionId }
     });
 
     if (error) throw error;
-    return data.numbers || [];
   }
 
-  async connectNumber(connectionId: string, phoneNumber: string): Promise<void> {
-    const { error } = await supabase.functions.invoke('whatsapp-business-api', {
-      body: { 
-        action: 'connect-number',
-        connectionId,
-        phoneNumber
-      }
+  async getQRCode(connectionId: string): Promise<string | null> {
+    const { data, error } = await supabase.functions.invoke('whatsapp-qr', {
+      body: { connectionId }
     });
 
     if (error) throw error;
+    return data?.qrCode || null;
   }
 }
 

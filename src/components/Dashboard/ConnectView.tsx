@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { whatsappService, type WhatsAppConnection } from "@/services/whatsappService";
-import { Plus, Trash2, Phone } from "lucide-react";
+import { Plus, Trash2, QrCode } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,13 +24,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 interface ConnectViewProps {
   botId: string;
@@ -39,9 +32,7 @@ interface ConnectViewProps {
 export function ConnectView({ botId }: ConnectViewProps) {
   const [connections, setConnections] = useState<WhatsAppConnection[]>([]);
   const [loading, setLoading] = useState(true);
-  const [availableNumbers, setAvailableNumbers] = useState<any[]>([]);
-  const [selectedNumber, setSelectedNumber] = useState<string>("");
-  const [isPurchasing, setIsPurchasing] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -100,38 +91,24 @@ export function ConnectView({ botId }: ConnectViewProps) {
     }
   };
 
-  const loadAvailableNumbers = async () => {
+  const handleInitializeWhatsApp = async (connectionId: string) => {
     try {
-      const numbers = await whatsappService.listAvailableNumbers();
-      setAvailableNumbers(numbers);
-    } catch (error) {
-      console.error("Failed to load available numbers:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load available phone numbers",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handlePurchaseNumber = async (connectionId: string) => {
-    try {
-      setIsPurchasing(true);
-      await whatsappService.purchaseNumber(connectionId);
+      setIsInitializing(true);
+      await whatsappService.initializeWhatsApp(connectionId);
       await loadConnections();
       toast({
         title: "Success",
-        description: "Phone number purchased successfully",
+        description: "WhatsApp initialization started",
       });
     } catch (error) {
-      console.error("Failed to purchase number:", error);
+      console.error("Failed to initialize WhatsApp:", error);
       toast({
         title: "Error",
-        description: "Failed to purchase phone number",
+        description: "Failed to initialize WhatsApp",
         variant: "destructive",
       });
     } finally {
-      setIsPurchasing(false);
+      setIsInitializing(false);
     }
   };
 
@@ -167,50 +144,40 @@ export function ConnectView({ botId }: ConnectViewProps) {
                 <p className="text-sm text-muted-foreground">
                   Status: {connection.status}
                 </p>
-                {connection.monthly_cost > 0 && (
-                  <p className="text-sm text-muted-foreground">
-                    Monthly Cost: ${connection.monthly_cost}
-                  </p>
-                )}
               </div>
               <div className="flex space-x-2">
                 {!connection.phone_number && (
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button variant="outline" size="icon" onClick={loadAvailableNumbers}>
-                        <Phone className="w-4 h-4" />
+                      <Button variant="outline" size="icon">
+                        <QrCode className="w-4 h-4" />
                       </Button>
                     </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
-                        <DialogTitle>Purchase Phone Number</DialogTitle>
+                        <DialogTitle>Connect WhatsApp</DialogTitle>
                         <DialogDescription>
-                          Select a phone number to purchase for your WhatsApp Business account.
+                          Scan this QR code with WhatsApp on your phone to connect.
                         </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4 py-4">
-                        <Select
-                          value={selectedNumber}
-                          onValueChange={setSelectedNumber}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a phone number" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {availableNumbers.map((number) => (
-                              <SelectItem key={number.phoneNumber} value={number.phoneNumber}>
-                                {number.phoneNumber} - ${number.price}/month
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          className="w-full"
-                          onClick={() => handlePurchaseNumber(connection.id)}
-                          disabled={isPurchasing || !selectedNumber}
-                        >
-                          {isPurchasing ? "Purchasing..." : "Purchase Number"}
-                        </Button>
+                        {connection.qr_code ? (
+                          <div className="flex justify-center">
+                            <img
+                              src={`data:image/png;base64,${connection.qr_code}`}
+                              alt="WhatsApp QR Code"
+                              className="w-64 h-64"
+                            />
+                          </div>
+                        ) : (
+                          <Button
+                            className="w-full"
+                            onClick={() => handleInitializeWhatsApp(connection.id)}
+                            disabled={isInitializing}
+                          >
+                            {isInitializing ? "Initializing..." : "Generate QR Code"}
+                          </Button>
+                        )}
                       </div>
                     </DialogContent>
                   </Dialog>
