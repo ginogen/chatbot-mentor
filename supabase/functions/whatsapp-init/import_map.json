@@ -1,0 +1,6 @@
+{
+  "imports": {
+    "@whiskeysockets/baileys": "https://esm.sh/@whiskeysockets/baileys@6.5.0",
+    "@hapi/boom": "https://esm.sh/@hapi/boom@10.0.1"
+  }
+}

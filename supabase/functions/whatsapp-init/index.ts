@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.0';
-import { Client, LocalAuth } from "npm:whatsapp-web.js";
+import { makeWASocket, useMultiFileAuthState, Browsers, DisconnectReason } from 'npm:@whiskeysockets/baileys';
+import { Boom } from 'npm:@hapi/boom';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -77,81 +78,65 @@ serve(async (req) => {
     }
 
     try {
-      console.log('Initializing WhatsApp client...');
+      console.log('Initializing Baileys client...');
       
-      // Configure WhatsApp client with improved settings
-      const client = new Client({
-        puppeteer: {
-          args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
-            '--no-first-run',
-            '--no-zygote',
-            '--disable-gpu'
-          ],
-          headless: true
-        },
-        authStrategy: new LocalAuth({
-          clientId: connectionId,
-          dataPath: `./.wwebjs_auth/${connectionId}`
-        })
+      // Initialize Baileys client with auth state
+      const { state, saveCreds } = await useMultiFileAuthState(`.auth_${connectionId}`);
+      
+      const sock = makeWASocket({
+        auth: state,
+        browser: Browsers.ubuntu('Chrome'),
+        printQRInTerminal: true
       });
 
-      // Handle QR code generation
-      client.on('qr', async (qr) => {
-        console.log('QR Code received');
-        const { error: updateError } = await supabaseClient
-          .from('whatsapp_connections')
-          .update({
-            qr_code: qr,
-            qr_code_timestamp: new Date().toISOString(),
-            status: 'connecting'
-          })
-          .eq('id', connectionId);
+      // Handle connection updates
+      sock.ev.on('connection.update', async (update) => {
+        const { connection, lastDisconnect, qr } = update;
+        
+        if (qr) {
+          console.log('QR Code received');
+          // Update QR code in database
+          await supabaseClient
+            .from('whatsapp_connections')
+            .update({
+              qr_code: qr,
+              qr_code_timestamp: new Date().toISOString(),
+              status: 'connecting'
+            })
+            .eq('id', connectionId);
+        }
 
-        if (updateError) {
-          console.error('Error updating QR code:', updateError);
+        if (connection === 'close') {
+          const shouldReconnect = (lastDisconnect?.error as Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
+          console.log('Connection closed due to ', lastDisconnect?.error, ', reconnecting ', shouldReconnect);
+          
+          // Update connection status
+          await supabaseClient
+            .from('whatsapp_connections')
+            .update({
+              status: shouldReconnect ? 'connecting' : 'disconnected',
+              qr_code: null,
+              qr_code_timestamp: null
+            })
+            .eq('id', connectionId);
+        } else if (connection === 'open') {
+          console.log('Connection opened');
+          
+          // Update connection status and phone number
+          await supabaseClient
+            .from('whatsapp_connections')
+            .update({
+              status: 'connected',
+              phone_number: sock.user?.id.split(':')[0],
+              qr_code: null,
+              qr_code_timestamp: null
+            })
+            .eq('id', connectionId);
         }
       });
 
-      // Handle successful connection
-      client.on('ready', async () => {
-        console.log('Client ready!');
-        const { error: updateError } = await supabaseClient
-          .from('whatsapp_connections')
-          .update({
-            status: 'connected',
-            phone_number: client.info.wid.user
-          })
-          .eq('id', connectionId);
-
-        if (updateError) {
-          console.error('Error updating connection status:', updateError);
-        }
-      });
-
-      // Handle authentication failures
-      client.on('auth_failure', async (msg) => {
-        console.error('Authentication failed:', msg);
-        const { error: updateError } = await supabaseClient
-          .from('whatsapp_connections')
-          .update({
-            status: 'disconnected',
-            qr_code: null,
-            qr_code_timestamp: null
-          })
-          .eq('id', connectionId);
-
-        if (updateError) {
-          console.error('Error updating connection status:', updateError);
-        }
-      });
-
-      // Initialize the client
-      await client.initialize();
-      console.log('Client initialized successfully');
+      // Save credentials whenever they are updated
+      sock.ev.on('creds.update', saveCreds);
 
       return new Response(
         JSON.stringify({ 
