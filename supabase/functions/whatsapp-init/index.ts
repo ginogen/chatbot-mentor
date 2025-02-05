@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.0';
-import { makeWASocket, useMultiFileAuthState, Browsers } from 'npm:@adiwajshing/baileys@5.0.0';
-import { Boom } from 'npm:@hapi/boom';
+import { makeWASocket, useMultiFileAuthState } from 'npm:@whiskeysockets/baileys@6.5.0';
+import { Boom } from 'npm:@hapi/boom@10.0.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -78,15 +78,15 @@ serve(async (req) => {
     }
 
     try {
-      console.log('Initializing Baileys client...');
+      console.log('Initializing WhatsApp client...');
       
-      // Initialize Baileys client with auth state
+      // Initialize WhatsApp client with auth state
       const { state, saveCreds } = await useMultiFileAuthState(`.auth_${connectionId}`);
       
       const sock = makeWASocket({
         auth: state,
-        browser: Browsers.ubuntu('Chrome'),
-        printQRInTerminal: true
+        printQRInTerminal: true,
+        browser: ['Chrome (Linux)', '', ''],
       });
 
       // Handle connection updates
@@ -107,7 +107,7 @@ serve(async (req) => {
         }
 
         if (connection === 'close') {
-          const shouldReconnect = (lastDisconnect?.error as Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
+          const shouldReconnect = (lastDisconnect?.error as Boom)?.output?.statusCode !== 401;
           console.log('Connection closed due to ', lastDisconnect?.error, ', reconnecting ', shouldReconnect);
           
           // Update connection status
@@ -127,7 +127,7 @@ serve(async (req) => {
             .from('whatsapp_connections')
             .update({
               status: 'connected',
-              phone_number: sock.user?.id.split(':')[0],
+              phone_number: sock.user?.id?.split(':')[0] || null,
               qr_code: null,
               qr_code_timestamp: null
             })
