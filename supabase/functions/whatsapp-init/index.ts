@@ -14,6 +14,8 @@ serve(async (req) => {
   }
 
   try {
+    console.log('WhatsApp initialization started');
+
     // Verify authentication
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -48,6 +50,8 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log('Connection ID received:', connectionId);
 
     // Get the connection and verify ownership
     const { data: connection, error: connectionError } = await supabaseClient

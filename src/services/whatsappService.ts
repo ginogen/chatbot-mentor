@@ -86,6 +86,7 @@ class WhatsAppService {
       }
 
       console.log('Session found, initializing WhatsApp...');
+      console.log('Connection ID:', connectionId);
       
       const { error: functionError } = await supabase.functions.invoke('whatsapp-init', {
         body: { connectionId },
