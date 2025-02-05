@@ -1,7 +1,13 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.0";
-import QRCode from "qrcode";
-import WebSocket from "ws";
+import { createClient } from '@supabase/supabase-js';
+import makeWASocket, { 
+  DisconnectReason,
+  useMultiFileAuthState,
+  fetchLatestBaileysVersion,
+  makeCacheableSignalKeyStore
+} from '@whiskeysockets/baileys';
+import { Boom } from '@hapi/boom';
+import pino from 'pino';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,112 +20,114 @@ serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      throw new Error('Missing authorization header');
-    }
-
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { 
-        global: { 
-          headers: { Authorization: authHeader } 
-        } 
-      }
-    );
-
     const { connectionId } = await req.json();
+    
     if (!connectionId) {
-      throw new Error('Missing connectionId parameter');
+      throw new Error('Connection ID is required');
     }
 
-    console.log('Initializing WhatsApp connection:', connectionId);
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Update connection status to connecting
-    const { error: updateError } = await supabaseClient
+    // Get connection details
+    const { data: connection, error: connectionError } = await supabase
       .from('whatsapp_connections')
-      .update({
-        status: 'connecting',
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', connectionId);
+      .select('*')
+      .eq('id', connectionId)
+      .single();
 
-    if (updateError) {
-      console.error('Error updating connection status:', updateError);
-      throw updateError;
+    if (connectionError || !connection) {
+      throw new Error('Connection not found');
     }
 
-    // Generate a temporary QR code
-    const qrData = `whatsapp-connection-${connectionId}-${Date.now()}`;
-    const qrDataUrl = await QRCode.toDataURL(qrData);
-
-    // Update the connection with the QR code
-    const { error: qrUpdateError } = await supabaseClient
-      .from('whatsapp_connections')
-      .update({
-        qr_code: qrDataUrl,
-        qr_code_timestamp: new Date().toISOString()
-      })
-      .eq('id', connectionId);
-
-    if (qrUpdateError) {
-      console.error('Error updating QR code:', qrUpdateError);
-      throw qrUpdateError;
-    }
-
-    // Set up WebSocket connection
-    const ws = new WebSocket('wss://web.whatsapp.com/ws');
-
-    ws.on('open', async () => {
-      console.log('WebSocket connection opened');
-      await supabaseClient
-        .from('whatsapp_connections')
-        .update({
-          status: 'connected',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', connectionId);
+    // Initialize WhatsApp connection
+    const logger = pino({ level: 'silent' });
+    const { version } = await fetchLatestBaileysVersion();
+    
+    const { state, saveCreds } = await useMultiFileAuthState(`auth_${connectionId}`);
+    
+    const sock = makeWASocket({
+      version,
+      logger,
+      printQRInTerminal: true,
+      auth: {
+        creds: state.creds,
+        keys: makeCacheableSignalKeyStore(state.keys, logger),
+      },
+      generateHighQualityLinkPreview: true,
+      browser: ['WhatsApp Bot', 'Chrome', '1.0.0'],
     });
 
-    ws.on('close', async () => {
-      console.log('WebSocket connection closed');
-      await supabaseClient
-        .from('whatsapp_connections')
-        .update({
-          status: 'disconnected',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', connectionId);
+    // Handle connection events
+    sock.ev.on('connection.update', async (update) => {
+      const { connection, lastDisconnect, qr } = update;
+
+      if (qr) {
+        // Update QR code in database
+        await supabase
+          .from('whatsapp_connections')
+          .update({
+            qr_code: qr,
+            qr_code_timestamp: new Date().toISOString(),
+            status: 'connecting'
+          })
+          .eq('id', connectionId);
+      }
+
+      if (connection === 'close') {
+        const shouldReconnect = (lastDisconnect?.error as Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
+        
+        if (shouldReconnect) {
+          console.log('Reconnecting...');
+        } else {
+          console.log('Connection closed. Please scan QR code again.');
+          await supabase
+            .from('whatsapp_connections')
+            .update({
+              status: 'disconnected',
+              qr_code: null,
+              qr_code_timestamp: null
+            })
+            .eq('id', connectionId);
+        }
+      } else if (connection === 'open') {
+        console.log('Connected successfully!');
+        await supabase
+          .from('whatsapp_connections')
+          .update({
+            status: 'connected',
+            phone_number: sock.user?.id.split(':')[0],
+            qr_code: null,
+            qr_code_timestamp: null
+          })
+          .eq('id', connectionId);
+      }
     });
 
-    ws.on('error', (error) => {
-      console.error('WebSocket error:', error);
-    });
+    // Save credentials whenever they are updated
+    sock.ev.on('creds.update', saveCreds);
 
     return new Response(
-      JSON.stringify({ 
-        status: 'success',
-        message: 'WhatsApp initialization started',
-        connectionId
-      }),
+      JSON.stringify({ message: 'WhatsApp initialization started' }),
       { 
         headers: { 
           ...corsHeaders,
           'Content-Type': 'application/json'
-        } 
+        }
       }
     );
-
   } catch (error) {
     console.error('Error:', error);
     return new Response(
-      JSON.stringify({ 
-        error: error instanceof Error ? error.message : 'Unknown error',
-      }),
+      JSON.stringify({ error: error.message }),
       { 
-        status: error instanceof Error && error.message.includes('Invalid authentication') ? 401 : 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
       }
     );
   }

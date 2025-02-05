@@ -1,9 +1,6 @@
 {
-  "imports": {
-    "qrcode": "npm:qrcode@1.5.3",
-    "ws": "npm:ws@8.13.0"
-  },
   "tasks": {
-    "start": "deno run --allow-net --allow-env index.ts"
-  }
+    "start": "deno run --allow-net --allow-env --allow-read --allow-write index.ts"
+  },
+  "importMap": "./import_map.json"
 }

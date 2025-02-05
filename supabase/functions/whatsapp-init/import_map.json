@@ -4,6 +4,11 @@
     "@hapi/boom": "npm:@hapi/boom@10.0.1",
     "qrcode-terminal": "npm:qrcode-terminal@0.12.0",
     "pino": "npm:pino@8.15.0",
-    "ws": "npm:ws@8.13.0"
+    "ws": "npm:ws@8.13.0",
+    "node-cache": "npm:node-cache@5.1.2",
+    "@adiwajshing/keyed-db": "npm:@adiwajshing/keyed-db@0.2.4",
+    "jimp": "npm:jimp@0.16.13",
+    "link-preview-js": "npm:link-preview-js@3.0.5",
+    "libsignal": "https://esm.sh/libsignal@2.0.1"
   }
 }
