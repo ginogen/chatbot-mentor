@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.0';
-import { makeWASocket, useMultiFileAuthState, Browsers, DisconnectReason } from 'npm:@whiskeysockets/baileys';
+import { makeWASocket, useMultiFileAuthState, Browsers } from 'npm:@adiwajshing/baileys@5.0.0';
 import { Boom } from 'npm:@hapi/boom';
 
 const corsHeaders = {
