@@ -331,78 +331,39 @@ export type Database = {
         }
         Relationships: []
       }
-      whatsapp_business_config: {
-        Row: {
-          access_token: string | null
-          business_account_id: string | null
-          created_at: string
-          id: string
-          phone_number_id: string | null
-          status: string | null
-          updated_at: string
-          webhook_secret: string | null
-          webhook_verify_token: string | null
-        }
-        Insert: {
-          access_token?: string | null
-          business_account_id?: string | null
-          created_at?: string
-          id?: string
-          phone_number_id?: string | null
-          status?: string | null
-          updated_at?: string
-          webhook_secret?: string | null
-          webhook_verify_token?: string | null
-        }
-        Update: {
-          access_token?: string | null
-          business_account_id?: string | null
-          created_at?: string
-          id?: string
-          phone_number_id?: string | null
-          status?: string | null
-          updated_at?: string
-          webhook_secret?: string | null
-          webhook_verify_token?: string | null
-        }
-        Relationships: []
-      }
       whatsapp_connections: {
         Row: {
           bot_id: string | null
           created_at: string
-          display_phone_number: string | null
           id: string
-          monthly_cost: number | null
           phone_number: string | null
+          qr_code: string | null
+          qr_code_timestamp: string | null
           session_data: Json | null
           status: string | null
           updated_at: string
-          whatsapp_business_phone_number: string | null
         }
         Insert: {
           bot_id?: string | null
           created_at?: string
-          display_phone_number?: string | null
           id?: string
-          monthly_cost?: number | null
           phone_number?: string | null
+          qr_code?: string | null
+          qr_code_timestamp?: string | null
           session_data?: Json | null
           status?: string | null
           updated_at?: string
-          whatsapp_business_phone_number?: string | null
         }
         Update: {
           bot_id?: string | null
           created_at?: string
-          display_phone_number?: string | null
           id?: string
-          monthly_cost?: number | null
           phone_number?: string | null
+          qr_code?: string | null
+          qr_code_timestamp?: string | null
           session_data?: Json | null
           status?: string | null
           updated_at?: string
-          whatsapp_business_phone_number?: string | null
         }
         Relationships: [
           {
