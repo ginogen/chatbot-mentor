@@ -3,6 +3,7 @@
     "@whiskeysockets/baileys": "npm:@whiskeysockets/baileys@6.5.0",
     "@hapi/boom": "npm:@hapi/boom@10.0.1",
     "qrcode-terminal": "npm:qrcode-terminal@0.12.0",
-    "pino": "npm:pino@8.15.0"
+    "pino": "npm:pino@8.15.0",
+    "ws": "npm:ws@8.13.0"
   }
 }

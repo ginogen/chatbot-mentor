@@ -8,9 +8,5 @@
   },
   "tasks": {
     "start": "deno run --allow-net --allow-env index.ts"
-  },
-  "compilerOptions": {
-    "allowJs": true,
-    "lib": ["deno.window"]
   }
 }

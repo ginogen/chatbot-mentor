@@ -1,7 +1,13 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.0";
-import { WebSocket } from "https://deno.land/std@0.168.0/ws/mod.ts";
+import makeWASocket, { DisconnectReason } from "@whiskeysockets/baileys";
+import { Boom } from "@hapi/boom";
 import QRCode from "qrcode";
+import pino from "pino";
+import WebSocket from "ws";
+
+// @ts-ignore: Baileys types
+global.WebSocket = WebSocket;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -51,27 +57,73 @@ serve(async (req) => {
       throw updateError;
     }
 
-    // Generate a sample QR code for testing
-    const qrData = `whatsapp-connection-${connectionId}-${Date.now()}`;
-    const qrDataUrl = await QRCode.toDataURL(qrData, {
-      errorCorrectionLevel: 'H',
-      margin: 1,
-      width: 300
+    // Initialize WhatsApp connection
+    const logger = pino({ level: 'silent' });
+    const sock = makeWASocket({
+      printQRInTerminal: false,
+      logger,
+      auth: {
+        creds: {} as any,
+        keys: {} as any
+      }
     });
 
-    // Update the connection with the QR code
-    const { error: qrUpdateError } = await supabaseClient
-      .from('whatsapp_connections')
-      .update({
-        qr_code: qrDataUrl,
-        qr_code_timestamp: new Date().toISOString()
-      })
-      .eq('id', connectionId);
+    // Handle connection events
+    sock.ev.on('connection.update', async (update) => {
+      const { connection, lastDisconnect, qr } = update;
+      
+      if (qr) {
+        try {
+          // Generate QR code as data URL
+          const qrDataUrl = await QRCode.toDataURL(qr, {
+            errorCorrectionLevel: 'H',
+            margin: 1,
+            width: 300
+          });
 
-    if (qrUpdateError) {
-      console.error('Error updating QR code:', qrUpdateError);
-      throw qrUpdateError;
-    }
+          // Update the connection with the QR code
+          const { error: qrUpdateError } = await supabaseClient
+            .from('whatsapp_connections')
+            .update({
+              qr_code: qrDataUrl,
+              qr_code_timestamp: new Date().toISOString()
+            })
+            .eq('id', connectionId);
+
+          if (qrUpdateError) {
+            console.error('Error updating QR code:', qrUpdateError);
+            throw qrUpdateError;
+          }
+        } catch (error) {
+          console.error('Error generating QR code:', error);
+          throw error;
+        }
+      }
+
+      if (connection === 'close') {
+        const shouldReconnect = (lastDisconnect?.error as Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
+        console.log('Connection closed. Reconnect:', shouldReconnect);
+        
+        if (!shouldReconnect) {
+          await supabaseClient
+            .from('whatsapp_connections')
+            .update({
+              status: 'disconnected',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', connectionId);
+        }
+      } else if (connection === 'open') {
+        console.log('Connection opened');
+        await supabaseClient
+          .from('whatsapp_connections')
+          .update({
+            status: 'connected',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', connectionId);
+      }
+    });
 
     return new Response(
       JSON.stringify({ 
