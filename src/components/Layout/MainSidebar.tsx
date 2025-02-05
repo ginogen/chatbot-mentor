@@ -42,7 +42,7 @@ export const MainSidebar = ({
   ];
 
   return (
-    <Sidebar className="sidebar-gradient border-r border-white/5">
+    <Sidebar className="sidebar-gradient border-r border-white/5 w-full md:w-64">
       <SidebarHeader className="border-b border-white/5 p-4">
         <h2 className="text-lg font-semibold text-gradient">WhatsApp Bot Creator</h2>
       </SidebarHeader>
@@ -51,9 +51,9 @@ export const MainSidebar = ({
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={onTrainMenuToggle}
-              className="nav-item text-white/90"
+              className="nav-item text-white/90 w-full"
             >
-              <div className="flex items-center">
+              <div className="flex items-center w-full">
                 <Bot className="icon" />
                 <span>Train Bot</span>
               </div>
@@ -75,7 +75,9 @@ export const MainSidebar = ({
                         onBotSelect(bot.id);
                         onViewSelect("train");
                       }}
-                      className={`nav-item text-white/80 hover:text-white ${selectedBot === bot.id && selectedView === "train" ? "active" : ""}`}
+                      className={`nav-item text-white/80 hover:text-white w-full ${
+                        selectedBot === bot.id && selectedView === "train" ? "active" : ""
+                      }`}
                     >
                       {bot.name}
                     </SidebarMenuSubButton>
@@ -89,7 +91,9 @@ export const MainSidebar = ({
             <SidebarMenuItem key={item.id}>
               <SidebarMenuButton
                 onClick={() => onViewSelect(item.id)}
-                className={`nav-item text-white/80 hover:text-white ${selectedView === item.id ? "active" : ""}`}
+                className={`nav-item text-white/80 hover:text-white w-full ${
+                  selectedView === item.id ? "active" : ""
+                }`}
               >
                 <item.icon className="icon" />
                 <span>{item.label}</span>

@@ -104,15 +104,19 @@ const Index = () => {
           <Menu className="h-6 w-6" />
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="p-0 w-72">
+      <SheetContent side="left" className="p-0 w-72 bg-[#13141C]">
         <MainSidebar
           bots={bots}
           selectedBot={selectedBot}
           selectedView={selectedView}
           isTrainMenuOpen={isTrainMenuOpen}
-          onCreateBot={() => setIsCreateModalOpen(true)}
+          onCreateBot={() => {
+            setIsCreateModalOpen(true);
+          }}
           onBotSelect={setSelectedBot}
-          onViewSelect={setSelectedView}
+          onViewSelect={(view) => {
+            setSelectedView(view);
+          }}
           onTrainMenuToggle={() => setIsTrainMenuOpen(!isTrainMenuOpen)}
         />
       </SheetContent>
