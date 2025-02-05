@@ -91,7 +91,10 @@ export function ConnectView({ botId }: ConnectViewProps) {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Function invocation error:", error);
+        throw error;
+      }
 
       await loadConnections();
       toast({
