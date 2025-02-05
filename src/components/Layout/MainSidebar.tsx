@@ -42,11 +42,11 @@ export const MainSidebar = ({
   ];
 
   return (
-    <Sidebar className="sidebar-gradient border-r border-white/5 w-full md:w-64">
+    <Sidebar className="sidebar-gradient border-r border-white/5 w-full">
       <SidebarHeader className="border-b border-white/5 p-4">
         <h2 className="text-lg font-semibold text-gradient">WhatsApp Bot Creator</h2>
       </SidebarHeader>
-      <SidebarContent>
+      <SidebarContent className="overflow-y-auto">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
@@ -54,7 +54,7 @@ export const MainSidebar = ({
               className="nav-item text-white/90 w-full"
             >
               <div className="flex items-center w-full">
-                <Bot className="icon" />
+                <Bot className="icon mr-2" />
                 <span>Train Bot</span>
               </div>
             </SidebarMenuButton>
@@ -95,7 +95,7 @@ export const MainSidebar = ({
                   selectedView === item.id ? "active" : ""
                 }`}
               >
-                <item.icon className="icon" />
+                <item.icon className="icon mr-2" />
                 <span>{item.label}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
