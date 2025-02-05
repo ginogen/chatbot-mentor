@@ -106,18 +106,21 @@ const Index = () => {
       </SheetTrigger>
       <SheetContent 
         side="left" 
-        className="p-0 bg-[#1A1B1E]"
+        className="p-0 w-[280px] bg-[#1E1E1E]"
+        onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        <MainSidebar
-          bots={bots}
-          selectedBot={selectedBot}
-          selectedView={selectedView}
-          isTrainMenuOpen={isTrainMenuOpen}
-          onCreateBot={() => setIsCreateModalOpen(true)}
-          onBotSelect={setSelectedBot}
-          onViewSelect={setSelectedView}
-          onTrainMenuToggle={() => setIsTrainMenuOpen(!isTrainMenuOpen)}
-        />
+        <div className="h-full overflow-y-auto">
+          <MainSidebar
+            bots={bots}
+            selectedBot={selectedBot}
+            selectedView={selectedView}
+            isTrainMenuOpen={isTrainMenuOpen}
+            onCreateBot={() => setIsCreateModalOpen(true)}
+            onBotSelect={setSelectedBot}
+            onViewSelect={setSelectedView}
+            onTrainMenuToggle={() => setIsTrainMenuOpen(!isTrainMenuOpen)}
+          />
+        </div>
       </SheetContent>
     </Sheet>
   );
