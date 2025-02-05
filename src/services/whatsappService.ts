@@ -1,11 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
+import { Json } from "@/integrations/supabase/types";
 
 export interface WhatsAppConnection {
   id: string;
   bot_id: string | null;
   phone_number: string | null;
   status: "disconnected" | "connecting" | "connected";
-  session_data: any;
+  session_data: Json | null;
   created_at: string;
   updated_at: string;
   qr_code: string | null;
@@ -22,7 +23,11 @@ class WhatsAppService {
 
       if (error) throw error;
       
-      return data || [];
+      // Ensure the status is one of the allowed values
+      return (data || []).map(conn => ({
+        ...conn,
+        status: this.normalizeStatus(conn.status)
+      }));
     } catch (error) {
       console.error('Failed to get WhatsApp connections:', error);
       throw error;
@@ -41,7 +46,11 @@ class WhatsAppService {
         .single();
 
       if (error) throw error;
-      return data;
+      
+      return {
+        ...data,
+        status: this.normalizeStatus(data.status)
+      };
     } catch (error) {
       console.error('Failed to create WhatsApp connection:', error);
       throw error;
@@ -96,32 +105,11 @@ class WhatsAppService {
     }
   }
 
-  async getQRCode(connectionId: string): Promise<string | null> {
-    try {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError) {
-        console.error('Session error:', sessionError);
-        throw sessionError;
-      }
-
-      if (!session) {
-        throw new Error('No active session found. Please log in again.');
-      }
-
-      const { data, error } = await supabase.functions.invoke('whatsapp-qr', {
-        body: { connectionId },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        }
-      });
-
-      if (error) throw error;
-      return data?.qrCode || null;
-    } catch (error) {
-      console.error('Error getting QR code:', error);
-      throw error;
-    }
+  private normalizeStatus(status: string): WhatsAppConnection['status'] {
+    const validStatuses: WhatsAppConnection['status'][] = ['disconnected', 'connecting', 'connected'];
+    return validStatuses.includes(status as WhatsAppConnection['status']) 
+      ? status as WhatsAppConnection['status']
+      : 'disconnected';
   }
 }
 
