@@ -6,7 +6,7 @@ import makeWASocket, {
   makeCacheableSignalKeyStore
 } from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
-import pino from 'pino';
+import P from 'pino';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -48,7 +48,7 @@ export const handler = async (event, context) => {
     }
 
     // Initialize WhatsApp connection
-    const logger = pino({ level: 'silent' });
+    const logger = P({ level: 'silent' });
     const { version } = await fetchLatestBaileysVersion();
     
     const { state, saveCreds } = await useMultiFileAuthState(`auth_${connectionId}`);
