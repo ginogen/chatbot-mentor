@@ -50,12 +50,8 @@
     @apply bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent;
   }
 
-  .sidebar-gradient {
-    @apply bg-gradient-dark;
-  }
-
   .nav-item {
-    @apply relative flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 hover:bg-white/5;
+    @apply relative flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 hover:bg-white/10;
   }
 
   .nav-item.active {

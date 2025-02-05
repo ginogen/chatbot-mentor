@@ -100,7 +100,7 @@ const Index = () => {
   };
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={window.innerWidth >= 768}>
       <div className="flex min-h-screen w-full bg-[#13141C]">
         <MainSidebar
           bots={bots}
@@ -118,7 +118,7 @@ const Index = () => {
             userDisplayName={getUserDisplayName()}
             onLogout={handleLogout}
           />
-          <div className="flex-1 p-6 overflow-auto">
+          <div className="flex-1 p-4 md:p-6 overflow-auto">
             <MainContent
               selectedBot={selectedBot}
               selectedView={selectedView}
@@ -128,10 +128,10 @@ const Index = () => {
 
         <button
           onClick={() => setIsPreviewChatOpen(true)}
-          className="fixed bottom-8 right-8 w-14 h-14 rounded-full bg-primary shadow-lg flex items-center justify-center transition-transform hover:scale-110 z-50 hover:bg-primary-light"
+          className="fixed bottom-4 right-4 md:bottom-8 md:right-8 w-12 h-12 md:w-14 md:h-14 rounded-full bg-primary shadow-lg flex items-center justify-center transition-transform hover:scale-110 z-50 hover:bg-primary-light"
           title="Preview Chat"
         >
-          <Eye className="w-6 h-6 text-primary-foreground" />
+          <Eye className="w-5 h-5 md:w-6 md:h-6 text-primary-foreground" />
         </button>
 
         {selectedBot && (
