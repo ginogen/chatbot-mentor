@@ -1,10 +1,13 @@
 import { supabase } from "@/integrations/supabase/client";
+import { Database } from "@/integrations/supabase/types";
+
+type WhatsAppStatus = "disconnected" | "connecting" | "connected";
 
 export interface WhatsAppConnection {
   id: string;
-  bot_id: string;
+  bot_id: string | null;
   phone_number: string | null;
-  status: 'disconnected' | 'connecting' | 'connected';
+  status: WhatsAppStatus;
   session_data: any;
   created_at: string;
   updated_at: string;
@@ -21,7 +24,12 @@ class WhatsAppService {
         .eq('bot_id', botId);
 
       if (error) throw error;
-      return data || [];
+      
+      // Type assertion to ensure status is of correct type
+      return (data || []).map(connection => ({
+        ...connection,
+        status: (connection.status || 'disconnected') as WhatsAppStatus
+      }));
     } catch (error) {
       console.error('Failed to get WhatsApp connections:', error);
       throw error;
@@ -40,7 +48,12 @@ class WhatsAppService {
         .single();
 
       if (error) throw error;
-      return data;
+      
+      // Type assertion to ensure status is of correct type
+      return {
+        ...data,
+        status: (data.status || 'disconnected') as WhatsAppStatus
+      };
     } catch (error) {
       console.error('Failed to create WhatsApp connection:', error);
       throw error;
