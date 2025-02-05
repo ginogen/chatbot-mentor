@@ -14,12 +14,20 @@ serve(async (req) => {
   }
 
   try {
-    // Verify authentication
+    // Get the authorization header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      throw new Error('Missing authorization header');
+      console.error('Missing authorization header');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized', details: 'Missing authorization header' }),
+        { 
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
     }
 
+    // Create Supabase client with auth context
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -43,9 +51,17 @@ serve(async (req) => {
       );
     }
 
+    // Get the connection ID from the request body
     const { connectionId } = await req.json();
     if (!connectionId) {
-      throw new Error('Missing connectionId parameter');
+      console.error('Missing connectionId parameter');
+      return new Response(
+        JSON.stringify({ error: 'Bad Request', details: 'Missing connectionId parameter' }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
     }
 
     // Get the WhatsApp connection
@@ -58,7 +74,7 @@ serve(async (req) => {
     if (connectionError || !connection) {
       console.error('Connection error:', connectionError);
       return new Response(
-        JSON.stringify({ error: 'Connection not found', details: connectionError?.message }),
+        JSON.stringify({ error: 'Not Found', details: 'Connection not found' }),
         { 
           status: 404,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -77,7 +93,7 @@ serve(async (req) => {
     if (botError || !bot) {
       console.error('Bot access error:', botError);
       return new Response(
-        JSON.stringify({ error: 'Unauthorized', details: 'Bot not found or access denied' }),
+        JSON.stringify({ error: 'Forbidden', details: 'Bot not found or access denied' }),
         { 
           status: 403,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -107,7 +123,7 @@ serve(async (req) => {
       });
 
       client.on('qr', async (qr) => {
-        console.log('QR Code received:', qr);
+        console.log('QR Code received');
         // Update the QR code in the database
         const { error: updateError } = await supabaseClient
           .from('whatsapp_connections')

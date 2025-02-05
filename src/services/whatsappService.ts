@@ -74,29 +74,30 @@ class WhatsAppService {
 
   async initializeWhatsApp(connectionId: string): Promise<void> {
     try {
-      // Get the current session
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
       if (sessionError) {
         console.error('Session error:', sessionError);
         throw new Error('Failed to get authentication session');
       }
+      
+      const session = sessionData?.session;
       if (!session) {
         console.error('No active session found');
         throw new Error('No active session');
       }
 
-      console.log('Initializing WhatsApp with session token:', !!session.access_token);
-
-      const { error } = await supabase.functions.invoke('whatsapp-init', {
+      console.log('Session found, initializing WhatsApp...');
+      
+      const { error: functionError } = await supabase.functions.invoke('whatsapp-init', {
         body: { connectionId },
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         }
       });
 
-      if (error) {
-        console.error('WhatsApp initialization error:', error);
-        throw error;
+      if (functionError) {
+        console.error('WhatsApp initialization error:', functionError);
+        throw functionError;
       }
     } catch (error) {
       console.error('Failed to initialize WhatsApp:', error);
@@ -106,9 +107,17 @@ class WhatsAppService {
 
   async getQRCode(connectionId: string): Promise<string | null> {
     try {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError) throw sessionError;
-      if (!session) throw new Error('No active session');
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) {
+        console.error('Session error:', sessionError);
+        throw sessionError;
+      }
+      
+      const session = sessionData?.session;
+      if (!session) {
+        console.error('No active session found');
+        throw new Error('No active session');
+      }
 
       const { data, error } = await supabase.functions.invoke('whatsapp-qr', {
         body: { connectionId },
