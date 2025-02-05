@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.0";
-import QRCode from "https://esm.sh/qrcode@1.5.3";
+import { QRCodeGenerator } from "https://deno.land/x/qrcode/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -52,16 +52,16 @@ serve(async (req) => {
     // Generate a unique QR code data
     const qrData = `whatsapp-connection:${connectionId}-${Date.now()}`;
     
-    // Generate QR code as data URL with specific options for better visibility
-    const qrCodeDataUrl = await QRCode.toDataURL(qrData, {
+    // Generate QR code using Deno QR code generator
+    const qrCode = new QRCodeGenerator();
+    const qrCodeSvg = await qrCode.generate(qrData, {
       errorCorrectionLevel: 'H',
+      type: 'svg',
       margin: 1,
-      width: 400,
-      color: {
-        dark: '#000000',
-        light: '#ffffff'
-      }
     });
+
+    // Convert SVG to data URL
+    const qrCodeDataUrl = `data:image/svg+xml;base64,${btoa(qrCodeSvg)}`;
     
     console.log('Generated QR code for connection:', connectionId);
 
