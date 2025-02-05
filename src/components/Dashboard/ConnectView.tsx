@@ -95,8 +95,19 @@ export function ConnectView({ botId }: ConnectViewProps) {
   const handleInitializeWhatsApp = async (connectionId: string) => {
     try {
       setIsInitializing(true);
+      
+      // Get the current session
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('No active session found');
+      }
+
       const { error } = await supabase.functions.invoke('whatsapp-init', {
-        body: { connectionId }
+        body: { connectionId },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
       });
 
       if (error) throw error;
