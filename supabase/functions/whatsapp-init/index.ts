@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { makeWASocket, useMultiFileAuthState, Browsers } from "@whiskeysockets/baileys";
+import { makeWASocket, useMultiFileAuthState, Browsers } from "https://esm.sh/@whiskeysockets/baileys@6.5.0";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.0';
 
 const corsHeaders = {
@@ -71,7 +71,7 @@ serve(async (req) => {
           .update({
             qr_code: qr,
             qr_code_timestamp: new Date().toISOString(),
-            status: 'pending'
+            status: 'connecting'
           })
           .eq('id', connectionId);
 
