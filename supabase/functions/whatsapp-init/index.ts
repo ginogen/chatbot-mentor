@@ -43,16 +43,34 @@ serve(async (req) => {
       );
     }
 
-    const { botId } = await req.json();
-    if (!botId) {
-      throw new Error('Missing botId parameter');
+    const { connectionId } = await req.json();
+    if (!connectionId) {
+      throw new Error('Missing connectionId parameter');
     }
 
-    // Verify the user owns this bot
+    // Get the WhatsApp connection
+    const { data: connection, error: connectionError } = await supabaseClient
+      .from('whatsapp_connections')
+      .select('*')
+      .eq('id', connectionId)
+      .single();
+
+    if (connectionError || !connection) {
+      console.error('Connection error:', connectionError);
+      return new Response(
+        JSON.stringify({ error: 'Connection not found', details: connectionError?.message }),
+        { 
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    // Get the bot to verify ownership
     const { data: bot, error: botError } = await supabaseClient
       .from('bots')
       .select('*')
-      .eq('id', botId)
+      .eq('id', connection.bot_id)
       .eq('user_id', user.id)
       .single();
 
@@ -84,20 +102,56 @@ serve(async (req) => {
           headless: true
         },
         authStrategy: new LocalAuth({
-          clientId: botId
+          clientId: connectionId
         })
       });
 
-      client.on('qr', (qr) => {
+      client.on('qr', async (qr) => {
         console.log('QR Code received:', qr);
+        // Update the QR code in the database
+        const { error: updateError } = await supabaseClient
+          .from('whatsapp_connections')
+          .update({
+            qr_code: qr,
+            qr_code_timestamp: new Date().toISOString(),
+            status: 'connecting'
+          })
+          .eq('id', connectionId);
+
+        if (updateError) {
+          console.error('Failed to update QR code:', updateError);
+        }
       });
 
-      client.on('ready', () => {
+      client.on('ready', async () => {
         console.log('Client is ready!');
+        // Update connection status
+        const { error: updateError } = await supabaseClient
+          .from('whatsapp_connections')
+          .update({
+            status: 'connected',
+            phone_number: client.info.wid.user
+          })
+          .eq('id', connectionId);
+
+        if (updateError) {
+          console.error('Failed to update connection status:', updateError);
+        }
       });
 
-      client.on('auth_failure', (msg) => {
+      client.on('auth_failure', async (msg) => {
         console.error('Authentication failure:', msg);
+        // Update connection status
+        const { error: updateError } = await supabaseClient
+          .from('whatsapp_connections')
+          .update({
+            status: 'disconnected'
+          })
+          .eq('id', connectionId);
+
+        if (updateError) {
+          console.error('Failed to update connection status:', updateError);
+        }
       });
 
       console.log('Starting client initialization...');
@@ -108,7 +162,7 @@ serve(async (req) => {
         JSON.stringify({ 
           status: 'initializing', 
           userId: user.id, 
-          botId 
+          connectionId 
         }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
