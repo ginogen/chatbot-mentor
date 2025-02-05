@@ -14,59 +14,38 @@ serve(async (req) => {
   }
 
   try {
+    // Verify authentication
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       console.error('Missing Authorization header');
       return new Response(
-        JSON.stringify({ 
-          error: 'Unauthorized', 
-          details: 'Missing Authorization header' 
-        }),
-        { 
-          status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
+        JSON.stringify({ error: 'Unauthorized', details: 'Missing Authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Create Supabase client with the auth header
+    // Create Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: authHeader },
-        },
-      }
+      { global: { headers: { Authorization: authHeader } } }
     );
 
-    // Verify the user is authenticated
+    // Verify user authentication
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     if (authError || !user) {
       console.error('Authentication error:', authError);
       return new Response(
-        JSON.stringify({ 
-          error: 'Unauthorized', 
-          details: authError?.message || 'User not authenticated' 
-        }),
-        { 
-          status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
+        JSON.stringify({ error: 'Unauthorized', details: authError?.message || 'User not authenticated' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     const { connectionId } = await req.json();
     if (!connectionId) {
       return new Response(
-        JSON.stringify({ 
-          error: 'Bad Request', 
-          details: 'Missing connectionId parameter' 
-        }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
+        JSON.stringify({ error: 'Bad Request', details: 'Missing connectionId parameter' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -80,34 +59,23 @@ serve(async (req) => {
     if (connectionError || !connection) {
       console.error('Connection error:', connectionError);
       return new Response(
-        JSON.stringify({ 
-          error: 'Not Found', 
-          details: 'Connection not found' 
-        }),
-        { 
-          status: 404,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
+        JSON.stringify({ error: 'Not Found', details: 'Connection not found' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Verify the user owns this connection through the bot
+    // Verify ownership
     if (connection.bots.user_id !== user.id) {
       return new Response(
-        JSON.stringify({ 
-          error: 'Forbidden', 
-          details: 'You do not have permission to access this connection' 
-        }),
-        { 
-          status: 403,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
+        JSON.stringify({ error: 'Forbidden', details: 'You do not have permission to access this connection' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     try {
       console.log('Initializing WhatsApp client...');
       
+      // Configure WhatsApp client with improved settings
       const client = new Client({
         puppeteer: {
           args: [
@@ -122,10 +90,12 @@ serve(async (req) => {
           headless: true
         },
         authStrategy: new LocalAuth({
-          clientId: connectionId
+          clientId: connectionId,
+          dataPath: `./.wwebjs_auth/${connectionId}`
         })
       });
 
+      // Handle QR code generation
       client.on('qr', async (qr) => {
         console.log('QR Code received');
         const { error: updateError } = await supabaseClient
@@ -142,6 +112,7 @@ serve(async (req) => {
         }
       });
 
+      // Handle successful connection
       client.on('ready', async () => {
         console.log('Client ready!');
         const { error: updateError } = await supabaseClient
@@ -157,6 +128,24 @@ serve(async (req) => {
         }
       });
 
+      // Handle authentication failures
+      client.on('auth_failure', async (msg) => {
+        console.error('Authentication failed:', msg);
+        const { error: updateError } = await supabaseClient
+          .from('whatsapp_connections')
+          .update({
+            status: 'disconnected',
+            qr_code: null,
+            qr_code_timestamp: null
+          })
+          .eq('id', connectionId);
+
+        if (updateError) {
+          console.error('Error updating connection status:', updateError);
+        }
+      });
+
+      // Initialize the client
       await client.initialize();
       console.log('Client initialized successfully');
 
@@ -166,9 +155,7 @@ serve(async (req) => {
           userId: user.id,
           connectionId 
         }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     } catch (whatsappError) {
       console.error('Error initializing WhatsApp:', whatsappError);
