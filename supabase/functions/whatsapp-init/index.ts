@@ -1,5 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.0';
+import makeWASocket, { DisconnectReason, useMultiFileAuthState } from 'npm:@whiskeysockets/baileys';
+import { Boom } from 'npm:@hapi/boom';
+import { join } from "https://deno.land/std@0.188.0/path/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -48,54 +51,87 @@ serve(async (req) => {
 
     console.log('Connection ID received:', connectionId);
 
-    const { data: connection, error: connectionError } = await supabaseClient
-      .from('whatsapp_connections')
-      .select('*, bots!inner(user_id)')
-      .eq('id', connectionId)
-      .single();
-
-    if (connectionError || !connection) {
-      console.error('Connection error:', connectionError);
-      return new Response(
-        JSON.stringify({ error: 'Not Found', details: 'Connection not found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // Create auth state directory for this connection
+    const authPath = `auth_info_${connectionId}`;
+    try {
+      await Deno.mkdir(authPath, { recursive: true });
+    } catch (error) {
+      console.log('Auth directory already exists or error creating:', error);
     }
 
-    if (connection.bots.user_id !== user.id) {
-      return new Response(
-        JSON.stringify({ error: 'Forbidden', details: 'You do not have permission to access this connection' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // Initialize WhatsApp connection
+    const { state, saveCreds } = await useMultiFileAuthState(authPath);
+    const sock = makeWASocket({
+      auth: state,
+      printQRInTerminal: true,
+      browser: ['Lovable Bot', 'Chrome', '1.0.0'],
+    });
 
-    // Generate a QR code for testing
-    const qrCode = "iVBORw0KGgoAAAANSUhEUgAAAIQAAACECAYAAABRRIOnAAAAAklEQVR4AewaftIAAAOFSURBVO3BQY7kSAIDQWeg/v+X67PmKYCgpGZ3ZYT9wRrjEmsMS6wxLLHGsMQawxJrDEusMSyxxrDEGsMSawxLrDEsscawxBrDEmsMS6wxLLHG8MGDlN+pckLlhMoTKk9QOaFyh8oJlTtUnlD5nSpPLLHGsMQawxJrDB98mMqbVJ6g8gaVEyp3qNyh8gaVN6m8aYk1hiXWGJZYY/jgL6NyQuWEyh0qd6jcoXKHyh0qd6j8TUusMSyxxrDEGsMHf7kqd6g8oXJC5YTKHSp3qPyXLLHGsMQawxJrDB/8ZVROqJxQOaFyQuWEyh0qJ1TuUPlfssSawxJrDEusMXzwZpX/EpU7VE6onFA5ofKEyv+JJdYYllhjWGKN4YMPUfmdVE6onFA5oXKHyh0qd6g8ofI7LbHGsMQawxJrDB/8w1ROqJxQOaFyQuWEyh0qJ1TuUDmhckLlhMoJlROvWGKNYYk1hiXWGOyDNf6PqJxQeYPKHSp3qDyh8jctscawxBrDEmsM9sEDKidU7lA5ofImlRMqd6g8oXJC5Q6VEyonVE6onFA5ofKEyhNLrDEsscawxBrDB3+ZKidUnqByd6icUDmhckLlDpU7VJ5YYo1hiTWGJdYYPvgwlTtU7lC5Q+UJKidU7lA5oXKHyh0qJ1TuUDmh8qYl1hiWWGNYYo3hgw9TOaFyQuWEyh0qT6icUDmhckLlDpUTKidUTqicUHnFEmsMy6wxLLHG8MEDlRMqd6icUDmhckLlDpU7VE6onFA5oXKHyh0qJ1TuUHnFEmsMy6wxLLHG8MGHqdyhckLlDpUTKidU7lA5oXJC5YTKCZUTKidU7lB5wxJrDEusMSyxxvDBhz1B5Q6VEyonVE6onFA5oXKHyh0qJ1ROqJxQOaHyhiXWGJZYY1hijcE++BdTOaFyQuWEyh0qJ1ROqJxQOaFyQuWEyomfWGKNYYk1hiXWGD74MJXfSeWEyh0qJ1TuUDmhckLlDpUTKidU7lB50xJrDEusMSyxxvDBh6m8SeUJKidUTqicUDmhckLlDpU7VE6o3KHypiXWGJZYY1hijcE++GVU7lA5oXJC5YTKCZUTKidUTqicUDmhckLlDpU7VJ5YYo1hiTWGJdYY7IM1xiXWGJZYY1hijWGJNYYl1hiWWGNYYo1hiTWGJdYYllhjWGKNYYk1hiXWGJZYY1hijf8BQe0FP3j3O6IAAAAASUVORK5CYII=";
+    // Handle connection updates
+    sock.ev.on('connection.update', async (update) => {
+      const { connection, lastDisconnect, qr } = update;
+      
+      if (qr) {
+        console.log('QR Code received:', qr);
+        
+        // Update connection with QR code
+        const { error: updateError } = await supabaseClient
+          .from('whatsapp_connections')
+          .update({
+            status: 'connecting',
+            qr_code: qr,
+            qr_code_timestamp: new Date().toISOString()
+          })
+          .eq('id', connectionId);
 
-    // Update connection status and QR code
-    const { error: updateError } = await supabaseClient
-      .from('whatsapp_connections')
-      .update({
-        status: 'connecting',
-        qr_code: qrCode,
-        qr_code_timestamp: new Date().toISOString()
-      })
-      .eq('id', connectionId);
+        if (updateError) {
+          console.error('Error updating QR code:', updateError);
+        }
+      }
 
-    if (updateError) {
-      console.error('Error updating connection:', updateError);
-      return new Response(
-        JSON.stringify({ error: 'Database Error', details: 'Failed to update connection status' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+      if (connection === 'close') {
+        const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
+        const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+        console.log('Connection closed due to:', lastDisconnect?.error, 'Reconnecting:', shouldReconnect);
+
+        // Update connection status
+        const { error: updateError } = await supabaseClient
+          .from('whatsapp_connections')
+          .update({
+            status: 'disconnected',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', connectionId);
+
+        if (updateError) {
+          console.error('Error updating connection status:', updateError);
+        }
+      } else if (connection === 'open') {
+        console.log('Connection opened');
+        
+        // Update connection status
+        const { error: updateError } = await supabaseClient
+          .from('whatsapp_connections')
+          .update({
+            status: 'connected',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', connectionId);
+
+        if (updateError) {
+          console.error('Error updating connection status:', updateError);
+        }
+      }
+    });
+
+    // Save credentials when they're updated
+    sock.ev.on('creds.update', saveCreds);
 
     return new Response(
       JSON.stringify({ 
         status: 'success',
-        userId: user.id,
-        connectionId,
-        qrCode
+        message: 'WhatsApp initialization started',
+        connectionId 
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
