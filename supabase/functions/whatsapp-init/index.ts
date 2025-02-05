@@ -6,75 +6,67 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const handleAuth = async (authHeader: string | null) => {
+  if (!authHeader) {
+    throw new Error('Missing Authorization header');
+  }
+
+  const supabaseClient = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+    { 
+      global: { 
+        headers: { Authorization: authHeader } 
+      } 
+    }
+  );
+
+  const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+  if (authError || !user) {
+    throw new Error(authError?.message || 'Unauthorized');
+  }
+
+  return { user, supabaseClient };
+};
+
+const updateConnection = async (supabaseClient: any, connectionId: string, qrCode: string) => {
+  const { error } = await supabaseClient
+    .from('whatsapp_connections')
+    .update({
+      qr_code: qrCode,
+      qr_code_timestamp: new Date().toISOString(),
+      status: 'pending'
+    })
+    .eq('id', connectionId);
+
+  if (error) {
+    throw new Error(`Database Error: ${error.message}`);
+  }
+};
+
 serve(async (req) => {
-  // Handle CORS preflight requests
+  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Get auth header
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      console.error('Missing Authorization header');
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized', details: 'Missing Authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // Authenticate request
+    const { supabaseClient } = await handleAuth(req.headers.get('Authorization'));
 
-    // Create Supabase client with auth context
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { 
-        global: { 
-          headers: { Authorization: authHeader } 
-        } 
-      }
-    );
-
-    // Get the user from the session
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
-    if (authError || !user) {
-      console.error('Authentication error:', authError);
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized', details: authError?.message || 'User not authenticated' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Get request body
+    // Get and validate connection ID
     const { connectionId } = await req.json();
     if (!connectionId) {
-      return new Response(
-        JSON.stringify({ error: 'Bad Request', details: 'Missing connectionId parameter' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      throw new Error('Missing connectionId parameter');
     }
 
     console.log('Processing request for connection:', connectionId);
 
-    // Generate a mock QR code for testing
+    // Generate mock QR code for testing
     const mockQRCode = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 
-    // Update connection with mock QR code
-    const { error: updateError } = await supabaseClient
-      .from('whatsapp_connections')
-      .update({
-        status: 'connecting',
-        qr_code: mockQRCode,
-        qr_code_timestamp: new Date().toISOString()
-      })
-      .eq('id', connectionId);
-
-    if (updateError) {
-      console.error('Error updating connection:', updateError);
-      return new Response(
-        JSON.stringify({ error: 'Database Error', details: updateError.message }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // Update connection with QR code
+    await updateConnection(supabaseClient, connectionId, mockQRCode);
 
     return new Response(
       JSON.stringify({ 
@@ -89,9 +81,11 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error instanceof Error ? error.message : 'Unknown error',
+      }),
       { 
-        status: error.message.includes('authorization') ? 401 : 500,
+        status: error instanceof Error && error.message.includes('Unauthorized') ? 401 : 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );

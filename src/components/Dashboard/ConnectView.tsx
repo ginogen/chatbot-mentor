@@ -4,27 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { whatsappService, type WhatsAppConnection } from "@/services/whatsappService";
-import { Plus, Trash2, QrCode } from "lucide-react";
+import { Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { ConnectionCard } from "./Connect/ConnectionCard";
 
 interface ConnectViewProps {
   botId: string;
@@ -96,7 +78,6 @@ export function ConnectView({ botId }: ConnectViewProps) {
     try {
       setIsInitializing(true);
       
-      // Get the current session
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
@@ -152,80 +133,13 @@ export function ConnectView({ botId }: ConnectViewProps) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {connections.map((connection) => (
-          <Card key={connection.id} className="p-6 space-y-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <h3 className="font-semibold">
-                  {connection.phone_number || "New Connection"}
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  Status: {connection.status}
-                </p>
-              </div>
-              <div className="flex space-x-2">
-                {!connection.phone_number && (
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" size="icon">
-                        <QrCode className="w-4 h-4" />
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Connect WhatsApp</DialogTitle>
-                        <DialogDescription>
-                          Scan this QR code with WhatsApp on your phone to connect.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-4 py-4">
-                        {connection.qr_code ? (
-                          <div className="flex justify-center">
-                            <img
-                              src={`data:image/png;base64,${connection.qr_code}`}
-                              alt="WhatsApp QR Code"
-                              className="w-64 h-64"
-                            />
-                          </div>
-                        ) : (
-                          <Button
-                            className="w-full"
-                            onClick={() => handleInitializeWhatsApp(connection.id)}
-                            disabled={isInitializing}
-                          >
-                            {isInitializing ? "Initializing..." : "Generate QR Code"}
-                          </Button>
-                        )}
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                )}
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive" size="icon">
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Delete Connection</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Are you sure you want to delete this WhatsApp connection?
-                        This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => handleDeleteConnection(connection.id)}
-                      >
-                        Delete
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            </div>
-          </Card>
+          <ConnectionCard
+            key={connection.id}
+            connection={connection}
+            onDelete={handleDeleteConnection}
+            onInitialize={handleInitializeWhatsApp}
+            isInitializing={isInitializing}
+          />
         ))}
       </div>
     </div>
