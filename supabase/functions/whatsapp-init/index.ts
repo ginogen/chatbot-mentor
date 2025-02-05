@@ -1,9 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.0";
-import makeWASocket, { DisconnectReason, useMultiFileAuthState } from "@whiskeysockets/baileys";
-import { Boom } from "@hapi/boom";
 import QRCode from "qrcode";
-import pino from "pino";
+import WebSocket from "ws";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -52,74 +50,51 @@ serve(async (req) => {
       throw updateError;
     }
 
-    // Initialize WhatsApp connection
-    const logger = pino({ level: 'silent' });
-    
-    const sock = makeWASocket({
-      printQRInTerminal: true,
-      logger,
-      auth: {
-        creds: {} as any,
-        keys: {} as any
-      },
-      browser: ['Chrome (Linux)', '', ''],
-      connectTimeoutMs: 60_000,
-      qrTimeout: 40_000,
+    // Generate a temporary QR code
+    const qrData = `whatsapp-connection-${connectionId}-${Date.now()}`;
+    const qrDataUrl = await QRCode.toDataURL(qrData);
+
+    // Update the connection with the QR code
+    const { error: qrUpdateError } = await supabaseClient
+      .from('whatsapp_connections')
+      .update({
+        qr_code: qrDataUrl,
+        qr_code_timestamp: new Date().toISOString()
+      })
+      .eq('id', connectionId);
+
+    if (qrUpdateError) {
+      console.error('Error updating QR code:', qrUpdateError);
+      throw qrUpdateError;
+    }
+
+    // Set up WebSocket connection
+    const ws = new WebSocket('wss://web.whatsapp.com/ws');
+
+    ws.on('open', async () => {
+      console.log('WebSocket connection opened');
+      await supabaseClient
+        .from('whatsapp_connections')
+        .update({
+          status: 'connected',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', connectionId);
     });
 
-    // Handle connection events
-    sock.ev.on('connection.update', async (update) => {
-      const { connection, lastDisconnect, qr } = update;
-      console.log('Connection update:', update);
-      
-      if (qr) {
-        try {
-          console.log('New QR code received');
-          // Generate QR code as data URL
-          const qrDataUrl = await QRCode.toDataURL(qr);
+    ws.on('close', async () => {
+      console.log('WebSocket connection closed');
+      await supabaseClient
+        .from('whatsapp_connections')
+        .update({
+          status: 'disconnected',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', connectionId);
+    });
 
-          // Update the connection with the QR code
-          const { error: qrUpdateError } = await supabaseClient
-            .from('whatsapp_connections')
-            .update({
-              qr_code: qrDataUrl,
-              qr_code_timestamp: new Date().toISOString()
-            })
-            .eq('id', connectionId);
-
-          if (qrUpdateError) {
-            console.error('Error updating QR code:', qrUpdateError);
-            throw qrUpdateError;
-          }
-        } catch (error) {
-          console.error('Error generating QR code:', error);
-          throw error;
-        }
-      }
-
-      if (connection === 'close') {
-        const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
-        const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
-        console.log('Connection closed. Status code:', statusCode, 'Reconnect:', shouldReconnect);
-        
-        await supabaseClient
-          .from('whatsapp_connections')
-          .update({
-            status: 'disconnected',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', connectionId);
-      } else if (connection === 'open') {
-        console.log('Connection opened successfully');
-        
-        await supabaseClient
-          .from('whatsapp_connections')
-          .update({
-            status: 'connected',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', connectionId);
-      }
+    ws.on('error', (error) => {
+      console.error('WebSocket error:', error);
     });
 
     return new Response(
