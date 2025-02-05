@@ -7,7 +7,7 @@ import makeWASocket, {
   makeCacheableSignalKeyStore
 } from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
-import pino from 'pino';
+import P from 'pino';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -43,7 +43,7 @@ serve(async (req) => {
     }
 
     // Initialize WhatsApp connection
-    const logger = pino({ level: 'silent' });
+    const logger = P({ level: 'silent' });
     const { version } = await fetchLatestBaileysVersion();
     
     const { state, saveCreds } = await useMultiFileAuthState(`auth_${connectionId}`);
@@ -63,6 +63,7 @@ serve(async (req) => {
     // Handle connection events
     sock.ev.on('connection.update', async (update) => {
       const { connection, lastDisconnect, qr } = update;
+      console.log('Connection update:', update);
 
       if (qr) {
         // Update QR code in database

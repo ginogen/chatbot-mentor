@@ -9,6 +9,7 @@
     "@adiwajshing/keyed-db": "npm:@adiwajshing/keyed-db@0.2.4",
     "jimp": "npm:jimp@0.16.13",
     "link-preview-js": "npm:link-preview-js@3.0.5",
-    "libsignal": "https://esm.sh/libsignal@2.0.1"
+    "libsignal": "https://esm.sh/libsignal@2.0.1",
+    "pino-pretty": "npm:pino-pretty@10.2.3"
   }
 }
