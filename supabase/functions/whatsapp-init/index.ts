@@ -8,6 +8,7 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -15,11 +16,11 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      console.error('Falta el header de autorización');
+      console.error('Missing Authorization header');
       return new Response(
         JSON.stringify({ 
           error: 'Unauthorized', 
-          details: 'Falta el header de autorización' 
+          details: 'Missing Authorization header' 
         }),
         { 
           status: 401,
@@ -28,6 +29,7 @@ serve(async (req) => {
       );
     }
 
+    // Create Supabase client with the auth header
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -38,13 +40,14 @@ serve(async (req) => {
       }
     );
 
+    // Verify the user is authenticated
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     if (authError || !user) {
-      console.error('Error de autenticación:', authError);
+      console.error('Authentication error:', authError);
       return new Response(
         JSON.stringify({ 
           error: 'Unauthorized', 
-          details: authError?.message || 'Usuario no autenticado' 
+          details: authError?.message || 'User not authenticated' 
         }),
         { 
           status: 401,
@@ -58,7 +61,7 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           error: 'Bad Request', 
-          details: 'Falta el parámetro connectionId' 
+          details: 'Missing connectionId parameter' 
         }),
         { 
           status: 400,
@@ -67,18 +70,19 @@ serve(async (req) => {
       );
     }
 
+    // Get the connection and verify ownership
     const { data: connection, error: connectionError } = await supabaseClient
       .from('whatsapp_connections')
-      .select('*')
+      .select('*, bots!inner(user_id)')
       .eq('id', connectionId)
       .single();
 
     if (connectionError || !connection) {
-      console.error('Error de conexión:', connectionError);
+      console.error('Connection error:', connectionError);
       return new Response(
         JSON.stringify({ 
           error: 'Not Found', 
-          details: 'Conexión no encontrada' 
+          details: 'Connection not found' 
         }),
         { 
           status: 404,
@@ -87,19 +91,12 @@ serve(async (req) => {
       );
     }
 
-    const { data: bot, error: botError } = await supabaseClient
-      .from('bots')
-      .select('*')
-      .eq('id', connection.bot_id)
-      .eq('user_id', user.id)
-      .single();
-
-    if (botError || !bot) {
-      console.error('Error de acceso al bot:', botError);
+    // Verify the user owns this connection through the bot
+    if (connection.bots.user_id !== user.id) {
       return new Response(
         JSON.stringify({ 
           error: 'Forbidden', 
-          details: 'Bot no encontrado o acceso denegado' 
+          details: 'You do not have permission to access this connection' 
         }),
         { 
           status: 403,
@@ -109,7 +106,7 @@ serve(async (req) => {
     }
 
     try {
-      console.log('Inicializando cliente de WhatsApp...');
+      console.log('Initializing WhatsApp client...');
       
       const client = new Client({
         puppeteer: {
@@ -130,7 +127,7 @@ serve(async (req) => {
       });
 
       client.on('qr', async (qr) => {
-        console.log('Código QR recibido');
+        console.log('QR Code received');
         const { error: updateError } = await supabaseClient
           .from('whatsapp_connections')
           .update({
@@ -141,12 +138,12 @@ serve(async (req) => {
           .eq('id', connectionId);
 
         if (updateError) {
-          console.error('Error al actualizar el código QR:', updateError);
+          console.error('Error updating QR code:', updateError);
         }
       });
 
       client.on('ready', async () => {
-        console.log('Cliente listo!');
+        console.log('Client ready!');
         const { error: updateError } = await supabaseClient
           .from('whatsapp_connections')
           .update({
@@ -156,17 +153,17 @@ serve(async (req) => {
           .eq('id', connectionId);
 
         if (updateError) {
-          console.error('Error al actualizar el estado de la conexión:', updateError);
+          console.error('Error updating connection status:', updateError);
         }
       });
 
       await client.initialize();
-      console.log('Cliente inicializado exitosamente');
+      console.log('Client initialized successfully');
 
       return new Response(
         JSON.stringify({ 
-          status: 'initializing', 
-          userId: user.id, 
+          status: 'initializing',
+          userId: user.id,
           connectionId 
         }),
         { 
@@ -174,7 +171,7 @@ serve(async (req) => {
         }
       );
     } catch (whatsappError) {
-      console.error('Error al inicializar WhatsApp:', whatsappError);
+      console.error('Error initializing WhatsApp:', whatsappError);
       return new Response(
         JSON.stringify({ 
           error: 'WhatsApp initialization failed', 
@@ -187,7 +184,7 @@ serve(async (req) => {
       );
     }
   } catch (error) {
-    console.error('Error:', error.message);
+    console.error('Error:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { 

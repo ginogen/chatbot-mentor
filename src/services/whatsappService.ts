@@ -22,10 +22,7 @@ class WhatsAppService {
 
       if (error) throw error;
       
-      return (data || []).map(connection => ({
-        ...connection,
-        status: (connection.status || 'disconnected') as WhatsAppStatus
-      }));
+      return data || [];
     } catch (error) {
       console.error('Failed to get WhatsApp connections:', error);
       throw error;
@@ -44,11 +41,7 @@ class WhatsAppService {
         .single();
 
       if (error) throw error;
-      
-      return {
-        ...data,
-        status: (data.status || 'disconnected') as WhatsAppStatus
-      };
+      return data;
     } catch (error) {
       console.error('Failed to create WhatsApp connection:', error);
       throw error;
@@ -71,43 +64,34 @@ class WhatsAppService {
 
   async initializeWhatsApp(connectionId: string): Promise<void> {
     try {
-      // Primero verificamos si hay una sesión activa
+      // Get the current session
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
       if (sessionError) {
-        console.error('Error de sesión:', sessionError);
-        throw new Error('No se pudo obtener la sesión de autenticación');
+        console.error('Session error:', sessionError);
+        throw new Error('Failed to get authentication session');
       }
 
       if (!session) {
-        console.error('No hay sesión activa');
-        // Intentamos refrescar la sesión
-        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-        if (refreshError || !refreshData.session) {
-          throw new Error('No hay sesión activa y no se pudo refrescar');
-        }
+        console.error('No active session');
+        throw new Error('No active session found. Please log in again.');
       }
 
-      const currentSession = session || (await supabase.auth.getSession()).data.session;
-      if (!currentSession) {
-        throw new Error('No se pudo establecer una sesión válida');
-      }
-
-      console.log('Sesión encontrada, inicializando WhatsApp...');
+      console.log('Session found, initializing WhatsApp...');
       
       const { error: functionError } = await supabase.functions.invoke('whatsapp-init', {
         body: { connectionId },
         headers: {
-          Authorization: `Bearer ${currentSession.access_token}`,
+          Authorization: `Bearer ${session.access_token}`,
         }
       });
 
       if (functionError) {
-        console.error('Error al inicializar WhatsApp:', functionError);
+        console.error('Error initializing WhatsApp:', functionError);
         throw functionError;
       }
     } catch (error) {
-      console.error('Error al inicializar WhatsApp:', error);
+      console.error('Error in initializeWhatsApp:', error);
       throw error;
     }
   }
@@ -117,33 +101,25 @@ class WhatsAppService {
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
       if (sessionError) {
-        console.error('Error de sesión:', sessionError);
+        console.error('Session error:', sessionError);
         throw sessionError;
       }
 
       if (!session) {
-        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-        if (refreshError || !refreshData.session) {
-          throw new Error('No hay sesión activa y no se pudo refrescar');
-        }
-      }
-
-      const currentSession = session || (await supabase.auth.getSession()).data.session;
-      if (!currentSession) {
-        throw new Error('No se pudo establecer una sesión válida');
+        throw new Error('No active session found. Please log in again.');
       }
 
       const { data, error } = await supabase.functions.invoke('whatsapp-qr', {
         body: { connectionId },
         headers: {
-          Authorization: `Bearer ${currentSession.access_token}`,
+          Authorization: `Bearer ${session.access_token}`,
         }
       });
 
       if (error) throw error;
       return data?.qrCode || null;
     } catch (error) {
-      console.error('Error al obtener el código QR:', error);
+      console.error('Error getting QR code:', error);
       throw error;
     }
   }
