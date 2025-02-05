@@ -75,16 +75,32 @@ class WhatsAppService {
   }
 
   async initializeWhatsApp(connectionId: string): Promise<void> {
+    // Get the current session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) throw sessionError;
+    if (!session) throw new Error('No active session');
+
     const { error } = await supabase.functions.invoke('whatsapp-init', {
-      body: { connectionId }
+      body: { connectionId },
+      headers: {
+        Authorization: `Bearer ${session.access_token}`
+      }
     });
 
     if (error) throw error;
   }
 
   async getQRCode(connectionId: string): Promise<string | null> {
+    // Get the current session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) throw sessionError;
+    if (!session) throw new Error('No active session');
+
     const { data, error } = await supabase.functions.invoke('whatsapp-qr', {
-      body: { connectionId }
+      body: { connectionId },
+      headers: {
+        Authorization: `Bearer ${session.access_token}`
+      }
     });
 
     if (error) throw error;
