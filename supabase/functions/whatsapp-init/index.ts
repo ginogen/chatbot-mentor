@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.0';
-import { join } from "https://deno.land/std@0.188.0/path/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,13 +7,13 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log('WhatsApp initialization started');
-
+    // Get auth header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       console.error('Missing Authorization header');
@@ -24,12 +23,18 @@ serve(async (req) => {
       );
     }
 
+    // Create Supabase client with auth context
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: authHeader } } }
+      { 
+        global: { 
+          headers: { Authorization: authHeader } 
+        } 
+      }
     );
 
+    // Get the user from the session
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     if (authError || !user) {
       console.error('Authentication error:', authError);
@@ -39,6 +44,7 @@ serve(async (req) => {
       );
     }
 
+    // Get request body
     const { connectionId } = await req.json();
     if (!connectionId) {
       return new Response(
@@ -47,10 +53,10 @@ serve(async (req) => {
       );
     }
 
-    console.log('Connection ID received:', connectionId);
+    console.log('Processing request for connection:', connectionId);
 
-    // Generate a QR code for testing purposes
-    const mockQRCode = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+    // Generate a mock QR code for testing
+    const mockQRCode = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 
     // Update connection with mock QR code
     const { error: updateError } = await supabaseClient
@@ -63,7 +69,7 @@ serve(async (req) => {
       .eq('id', connectionId);
 
     if (updateError) {
-      console.error('Error updating QR code:', updateError);
+      console.error('Error updating connection:', updateError);
       return new Response(
         JSON.stringify({ error: 'Database Error', details: updateError.message }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -74,10 +80,12 @@ serve(async (req) => {
       JSON.stringify({ 
         status: 'success',
         message: 'WhatsApp initialization started',
-        connectionId 
+        connectionId,
+        qr_code: mockQRCode
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
+
   } catch (error) {
     console.error('Error:', error);
     return new Response(
