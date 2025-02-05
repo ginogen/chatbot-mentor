@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.0";
-import qrcode from "https://esm.sh/qrcode@1.5.3";
+import QRCode from "https://esm.sh/qrcode@1.5.3";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,19 +8,16 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Get the authorization header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       throw new Error('Missing authorization header');
     }
 
-    // Initialize Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -31,7 +28,6 @@ serve(async (req) => {
       }
     );
 
-    // Get and validate connection ID from request body
     const { connectionId } = await req.json();
     if (!connectionId) {
       throw new Error('Missing connectionId parameter');
@@ -53,10 +49,19 @@ serve(async (req) => {
       throw updateError;
     }
 
-    // Generate a real QR code for testing
-    // In this case, we're generating a QR code with a unique identifier
+    // Generate a unique QR code data
     const qrData = `whatsapp-connection:${connectionId}-${Date.now()}`;
-    const qrCodeDataUrl = await qrcode.toDataURL(qrData);
+    
+    // Generate QR code as data URL with specific options for better visibility
+    const qrCodeDataUrl = await QRCode.toDataURL(qrData, {
+      errorCorrectionLevel: 'H',
+      margin: 1,
+      width: 400,
+      color: {
+        dark: '#000000',
+        light: '#ffffff'
+      }
+    });
     
     console.log('Generated QR code for connection:', connectionId);
 
