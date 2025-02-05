@@ -42,21 +42,21 @@ export const MainSidebar = ({
   ];
 
   return (
-    <Sidebar className="w-full bg-[#1E1E1E] border-r border-white/5">
+    <Sidebar className="sidebar-gradient border-r border-white/5">
       <SidebarHeader className="border-b border-white/5 p-4">
-        <h2 className="text-lg font-semibold text-white">
-          WhatsApp Bot Creator
-        </h2>
+        <h2 className="text-lg font-semibold text-gradient">WhatsApp Bot Creator</h2>
       </SidebarHeader>
-      <SidebarContent className="p-2">
+      <SidebarContent>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={onTrainMenuToggle}
-              className="flex items-center w-full px-3 py-2 text-white hover:bg-white/10 rounded-lg"
+              className="nav-item text-white/90"
             >
-              <Bot className="w-5 h-5 mr-2" />
-              <span>Train Bot</span>
+              <div className="flex items-center">
+                <Bot className="icon" />
+                <span>Train Bot</span>
+              </div>
             </SidebarMenuButton>
             {isTrainMenuOpen && (
               <SidebarMenuSub>
@@ -64,7 +64,7 @@ export const MainSidebar = ({
                   variant="ghost"
                   size="sm"
                   onClick={onCreateBot}
-                  className="w-full justify-start text-sm mb-2 text-white hover:bg-white/10"
+                  className="w-full justify-start text-sm mb-2 hover:bg-white/5 text-white/80 hover:text-white"
                 >
                   + Add Bot
                 </Button>
@@ -75,11 +75,7 @@ export const MainSidebar = ({
                         onBotSelect(bot.id);
                         onViewSelect("train");
                       }}
-                      className={`flex items-center w-full px-3 py-2 text-white hover:bg-white/10 rounded-lg ${
-                        selectedBot === bot.id && selectedView === "train"
-                          ? "bg-white/5"
-                          : ""
-                      }`}
+                      className={`nav-item text-white/80 hover:text-white ${selectedBot === bot.id && selectedView === "train" ? "active" : ""}`}
                     >
                       {bot.name}
                     </SidebarMenuSubButton>
@@ -93,11 +89,9 @@ export const MainSidebar = ({
             <SidebarMenuItem key={item.id}>
               <SidebarMenuButton
                 onClick={() => onViewSelect(item.id)}
-                className={`flex items-center w-full px-3 py-2 text-white hover:bg-white/10 rounded-lg ${
-                  selectedView === item.id ? "bg-white/5" : ""
-                }`}
+                className={`nav-item text-white/80 hover:text-white ${selectedView === item.id ? "active" : ""}`}
               >
-                <item.icon className="w-5 h-5 mr-2" />
+                <item.icon className="icon" />
                 <span>{item.label}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
