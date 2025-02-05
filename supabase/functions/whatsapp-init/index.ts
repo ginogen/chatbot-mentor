@@ -49,9 +49,30 @@ serve(async (req) => {
 
     console.log('Initializing WhatsApp connection:', connectionId);
 
-    // Initialize WhatsApp connection
-    const { state, saveCreds } = await useMultiFileAuthState(`auth_${connectionId}`);
-    
+    // Create a simple in-memory state handler
+    const state = {
+      creds: null,
+      keys: {},
+    };
+
+    const saveState = async (data: any) => {
+      state.creds = data.creds;
+      state.keys = data.keys;
+      
+      // Save state to Supabase
+      const { error: updateError } = await supabaseClient
+        .from('whatsapp_connections')
+        .update({
+          session_data: state,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', connectionId);
+
+      if (updateError) {
+        console.error('Error saving state:', updateError);
+      }
+    };
+
     const sock = makeWASocket({
       auth: state,
       browser: Browsers.ubuntu('Chrome'),
@@ -97,7 +118,7 @@ serve(async (req) => {
     });
 
     // Handle credentials update
-    sock.ev.on('creds.update', saveCreds);
+    sock.ev.on('creds.update', saveState);
 
     return new Response(
       JSON.stringify({ 
