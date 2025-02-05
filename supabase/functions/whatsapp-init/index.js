@@ -1,137 +1,91 @@
-import { createClient } from '@supabase/supabase-js';
-import makeWASocket, { 
-  DisconnectReason,
-  useMultiFileAuthState,
-  fetchLatestBaileysVersion,
-  makeCacheableSignalKeyStore
-} from '@whiskeysockets/baileys';
-import { Boom } from '@hapi/boom';
-import P from 'pino';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from '@supabase/supabase-js'
+import { makeWASocket, useMultiFileAuthState, Browsers } from '@whiskeysockets/baileys'
+import qrcode from 'qrcode'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+}
 
-export const handler = async (event, context) => {
-  // Handle CORS
-  if (event.httpMethod === 'OPTIONS') {
-    return {
-      statusCode: 200,
-      headers: corsHeaders,
-      body: ''
-    };
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const body = JSON.parse(event.body);
-    const { connectionId } = body;
+    const { botId } = await req.json()
     
-    if (!connectionId) {
-      throw new Error('Connection ID is required');
-    }
+    // Create Supabase client
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL'),
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    )
 
-    // Initialize Supabase client
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Get connection details
-    const { data: connection, error: connectionError } = await supabase
-      .from('whatsapp_connections')
-      .select('*')
-      .eq('id', connectionId)
-      .single();
-
-    if (connectionError || !connection) {
-      throw new Error('Connection not found');
-    }
-
-    // Initialize WhatsApp connection
-    const logger = P({ level: 'silent' });
-    const { version } = await fetchLatestBaileysVersion();
-    
-    const { state, saveCreds } = await useMultiFileAuthState(`auth_${connectionId}`);
+    const { auth, saveCreds, removeCreds } = await useMultiFileAuthState('auth_info_baileys')
     
     const sock = makeWASocket({
-      version,
-      logger,
+      auth,
       printQRInTerminal: true,
-      auth: {
-        creds: state.creds,
-        keys: makeCacheableSignalKeyStore(state.keys, logger),
-      },
-      generateHighQualityLinkPreview: true,
-      browser: ['WhatsApp Bot', 'Chrome', '1.0.0'],
-    });
+      browser: Browsers.ubuntu('Chrome'),
+    })
 
-    // Handle connection events
     sock.ev.on('connection.update', async (update) => {
-      const { connection, lastDisconnect, qr } = update;
-      console.log('Connection update:', update);
-
+      const { connection, lastDisconnect, qr } = update
+      
       if (qr) {
-        // Update QR code in database
-        await supabase
+        // Convert QR to base64 image
+        const qrBase64 = await qrcode.toDataURL(qr)
+        
+        // Update whatsapp_connections with QR code
+        await supabaseClient
           .from('whatsapp_connections')
-          .update({
-            qr_code: qr,
+          .upsert({
+            bot_id: botId,
+            qr_code: qrBase64,
             qr_code_timestamp: new Date().toISOString(),
-            status: 'connecting'
+            status: 'awaiting_qr'
           })
-          .eq('id', connectionId);
       }
 
       if (connection === 'close') {
-        const shouldReconnect = (lastDisconnect?.error as Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
-        
-        if (shouldReconnect) {
-          console.log('Reconnecting...');
-        } else {
-          console.log('Connection closed. Please scan QR code again.');
-          await supabase
-            .from('whatsapp_connections')
-            .update({
-              status: 'disconnected',
-              qr_code: null,
-              qr_code_timestamp: null
-            })
-            .eq('id', connectionId);
-        }
-      } else if (connection === 'open') {
-        console.log('Connected successfully!');
-        await supabase
+        await supabaseClient
           .from('whatsapp_connections')
-          .update({
-            status: 'connected',
-            phone_number: sock.user?.id.split(':')[0],
+          .update({ 
+            status: 'disconnected',
             qr_code: null,
             qr_code_timestamp: null
           })
-          .eq('id', connectionId);
+          .eq('bot_id', botId)
       }
-    });
 
-    // Save credentials whenever they are updated
-    sock.ev.on('creds.update', saveCreds);
+      if (connection === 'open') {
+        await supabaseClient
+          .from('whatsapp_connections')
+          .update({ 
+            status: 'connected',
+            qr_code: null,
+            qr_code_timestamp: null,
+            phone_number: sock.user.id.split(':')[0]
+          })
+          .eq('bot_id', botId)
+      }
+    })
 
-    return {
-      statusCode: 200,
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ message: 'WhatsApp initialization started' })
-    };
+    return new Response(
+      JSON.stringify({ message: 'WhatsApp initialization started' }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200 
+      }
+    )
   } catch (error) {
-    console.error('Error:', error);
-    return {
-      statusCode: 500,
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ error: error.message })
-    };
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500
+      }
+    )
   }
-};
+})

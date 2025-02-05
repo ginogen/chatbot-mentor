@@ -1,84 +1,71 @@
-import { Button } from "@/components/ui/button";
-import { QrCode } from "lucide-react";
-import { WhatsAppConnection } from "@/services/whatsappService";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Loader2 } from "lucide-react";
 
 interface QRCodeDialogProps {
-  connection: WhatsAppConnection;
-  onInitialize: (connectionId: string) => Promise<void>;
-  isInitializing: boolean;
+  isOpen: boolean;
+  onClose: () => void;
+  botId: string;
 }
 
-export function QRCodeDialog({ 
-  connection, 
-  onInitialize, 
-  isInitializing 
-}: QRCodeDialogProps) {
-  const [error, setError] = useState<string | null>(null);
+export const QRCodeDialog = ({ isOpen, onClose, botId }: QRCodeDialogProps) => {
+  const [qrCode, setQrCode] = useState<string | null>(null);
 
-  const handleInitialize = async () => {
-    try {
-      await onInitialize(connection.id);
-      setError(null);
-    } catch (err) {
-      setError('Error al generar el código QR. Por favor intente nuevamente.');
-      console.error('QR generation error:', err);
+  const { data: connection, isLoading } = useQuery({
+    queryKey: ["whatsapp-connection", botId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("whatsapp_connections")
+        .select("qr_code, status")
+        .eq("bot_id", botId)
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    refetchInterval: 3000, // Poll every 3 seconds
+  });
+
+  useEffect(() => {
+    if (connection?.status === "connected") {
+      onClose();
     }
-  };
+  }, [connection?.status, onClose]);
 
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="icon">
-          <QrCode className="w-4 h-4" />
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Connect WhatsApp</DialogTitle>
-          <DialogDescription>
-            Scan this QR code with WhatsApp on your phone to connect.
-          </DialogDescription>
+          <DialogTitle>Conectar WhatsApp</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 py-4">
-          {error && (
-            <div className="text-sm text-red-500 text-center">
-              {error}
-            </div>
-          )}
-          
-          {connection.qr_code ? (
-            <div className="flex justify-center">
+        <div className="flex flex-col items-center justify-center p-6">
+          {isLoading ? (
+            <Loader2 className="h-8 w-8 animate-spin" />
+          ) : connection?.qr_code ? (
+            <>
               <img
                 src={connection.qr_code}
                 alt="WhatsApp QR Code"
                 className="w-64 h-64"
-                onError={(e) => {
-                  console.error('Error loading QR code image');
-                  setError('Error al cargar el código QR');
-                  e.currentTarget.style.display = 'none';
-                }}
               />
-            </div>
+              <p className="text-sm text-muted-foreground mt-4 text-center">
+                Escanea este código QR con WhatsApp en tu teléfono para conectar el bot
+              </p>
+            </>
           ) : (
-            <Button
-              className="w-full"
-              onClick={handleInitialize}
-              disabled={isInitializing}
-            >
-              {isInitializing ? "Generando código QR..." : "Generar código QR"}
-            </Button>
+            <p className="text-sm text-muted-foreground">
+              Generando código QR...
+            </p>
           )}
         </div>
       </DialogContent>
     </Dialog>
   );
-}
+};
