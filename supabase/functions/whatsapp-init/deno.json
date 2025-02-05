@@ -1,8 +1,16 @@
 {
   "imports": {
-    "@whiskeysockets/baileys": "https://esm.sh/@whiskeysockets/baileys@6.5.0",
-    "@hapi/boom": "https://esm.sh/@hapi/boom@10.0.1",
-    "qrcode": "https://esm.sh/qrcode@1.5.3",
-    "pino": "https://esm.sh/pino@8.15.0"
+    "@whiskeysockets/baileys": "npm:@whiskeysockets/baileys@6.5.0",
+    "@hapi/boom": "npm:@hapi/boom@10.0.1",
+    "qrcode": "npm:qrcode@1.5.3",
+    "pino": "npm:pino@8.15.0",
+    "ws": "npm:ws@8.13.0"
+  },
+  "tasks": {
+    "start": "deno run --allow-net --allow-env index.ts"
+  },
+  "compilerOptions": {
+    "allowJs": true,
+    "lib": ["deno.window"]
   }
 }
