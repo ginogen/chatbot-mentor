@@ -9,7 +9,10 @@ import { MainSidebar } from "@/components/Layout/MainSidebar";
 import { TopBar } from "@/components/Layout/TopBar";
 import { MainContent } from "@/components/Layout/MainContent";
 import { PreviewChat } from "@/components/Dashboard/PreviewChat";
-import { Eye } from "lucide-react";
+import { Eye, Menu } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Index = () => {
   const [bots, setBots] = React.useState<BotType[]>([]);
@@ -20,13 +23,8 @@ const Index = () => {
   const [userProfile, setUserProfile] = React.useState<any>(null);
   const [userEmail, setUserEmail] = React.useState<string | null>(null);
   const [isPreviewChatOpen, setIsPreviewChatOpen] = React.useState(false);
+  const isMobile = useIsMobile();
   const { toast } = useToast();
-
-  React.useEffect(() => {
-    loadBots();
-    loadUserProfile();
-    loadUserEmail();
-  }, []);
 
   const loadUserEmail = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -99,9 +97,14 @@ const Index = () => {
     return userEmail || 'User';
   };
 
-  return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-[#13141C]">
+  const MobileSidebar = () => (
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button variant="ghost" size="icon" className="lg:hidden">
+          <Menu className="h-6 w-6" />
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="left" className="p-0 w-72">
         <MainSidebar
           bots={bots}
           selectedBot={selectedBot}
@@ -112,13 +115,33 @@ const Index = () => {
           onViewSelect={setSelectedView}
           onTrainMenuToggle={() => setIsTrainMenuOpen(!isTrainMenuOpen)}
         />
+      </SheetContent>
+    </Sheet>
+  );
 
-        <SidebarInset className="flex flex-col">
+  return (
+    <SidebarProvider>
+      <div className="flex min-h-screen w-full bg-[#13141C]">
+        <div className="hidden lg:block">
+          <MainSidebar
+            bots={bots}
+            selectedBot={selectedBot}
+            selectedView={selectedView}
+            isTrainMenuOpen={isTrainMenuOpen}
+            onCreateBot={() => setIsCreateModalOpen(true)}
+            onBotSelect={setSelectedBot}
+            onViewSelect={setSelectedView}
+            onTrainMenuToggle={() => setIsTrainMenuOpen(!isTrainMenuOpen)}
+          />
+        </div>
+
+        <SidebarInset className="flex flex-col w-full">
           <TopBar
             userDisplayName={getUserDisplayName()}
             onLogout={handleLogout}
+            leftContent={<MobileSidebar />}
           />
-          <div className="flex-1 p-6 overflow-auto">
+          <div className="flex-1 p-4 md:p-6 overflow-auto">
             <MainContent
               selectedBot={selectedBot}
               selectedView={selectedView}
@@ -126,13 +149,15 @@ const Index = () => {
           </div>
         </SidebarInset>
 
-        <button
-          onClick={() => setIsPreviewChatOpen(true)}
-          className="fixed bottom-8 right-8 w-14 h-14 rounded-full bg-primary shadow-lg flex items-center justify-center transition-transform hover:scale-110 z-50 hover:bg-primary-light"
-          title="Preview Chat"
-        >
-          <Eye className="w-6 h-6 text-primary-foreground" />
-        </button>
+        {!isMobile && (
+          <button
+            onClick={() => setIsPreviewChatOpen(true)}
+            className="fixed bottom-8 right-8 w-14 h-14 rounded-full bg-primary shadow-lg flex items-center justify-center transition-transform hover:scale-110 z-50 hover:bg-primary-light"
+            title="Preview Chat"
+          >
+            <Eye className="w-6 h-6 text-primary-foreground" />
+          </button>
+        )}
 
         {selectedBot && (
           <PreviewChat
