@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.0';
-import { WebSocket } from "https://deno.land/x/websocket@v0.1.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,7 +7,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -16,7 +14,6 @@ serve(async (req) => {
   try {
     console.log('WhatsApp initialization started');
 
-    // Verify authentication
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       console.error('Missing Authorization header');
@@ -26,14 +23,12 @@ serve(async (req) => {
       );
     }
 
-    // Create Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    // Verify user authentication
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     if (authError || !user) {
       console.error('Authentication error:', authError);
@@ -53,7 +48,6 @@ serve(async (req) => {
 
     console.log('Connection ID received:', connectionId);
 
-    // Get the connection and verify ownership
     const { data: connection, error: connectionError } = await supabaseClient
       .from('whatsapp_connections')
       .select('*, bots!inner(user_id)')
@@ -68,7 +62,6 @@ serve(async (req) => {
       );
     }
 
-    // Verify ownership
     if (connection.bots.user_id !== user.id) {
       return new Response(
         JSON.stringify({ error: 'Forbidden', details: 'You do not have permission to access this connection' }),
@@ -76,24 +69,33 @@ serve(async (req) => {
       );
     }
 
-    // Generate a mock QR code for testing
-    const mockQRCode = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+    // Generate a QR code for testing
+    const qrCode = "iVBORw0KGgoAAAANSUhEUgAAAIQAAACECAYAAABRRIOnAAAAAklEQVR4AewaftIAAAOFSURBVO3BQY7kSAIDQWeg/v+X67PmKYCgpGZ3ZYT9wRrjEmsMS6wxLLHGsMQawxJrDEusMSyxxrDEGsMSawxLrDEsscawxBrDEmsMS6wxLLHG8MGDlN+pckLlhMoTKk9QOaFyh8oJlTtUnlD5nSpPLLHGsMQawxJrDB98mMqbVJ6g8gaVEyp3qNyh8gaVN6m8aYk1hiXWGJZYY/jgL6NyQuWEyh0qd6jcoXKHyh0qd6j8TUusMSyxxrDEGsMHf7kqd6g8oXJC5YTKHSp3qPyXLLHGsMQawxJrDB/8ZVROqJxQOaFyQuWEyh0qJ1TuUPlfssSawxJrDEusMXzwZpX/EpU7VE6onFA5ofKEyv+JJdYYllhjWGKN4YMPUfmdVE6onFA5oXKHyh0qd6g8ofI7LbHGsMQawxJrDB/8w1ROqJxQOaFyQuWEyh0qJ1TuUDmhckLlhMoJlROvWGKNYYk1hiXWGOyDNf6PqJxQeYPKHSp3qDyh8jctscawxBrDEmsM9sEDKidU7lA5ofImlRMqd6g8oXJC5Q6VEyonVE6onFA5ofKEyhNLrDEsscawxBrDB3+ZKidUnqByd6icUDmhckLlDpU7VJ5YYo1hiTWGJdYYPvgwlTtU7lC5Q+UJKidU7lA5oXKHyh0qJ1TuUDmh8qYl1hiWWGNYYo3hgw9TOaFyQuWEyh0qT6icUDmhckLlDpUTKidUTqicUHnFEmsMy6wxLLHG8MEDlRMqd6icUDmhckLlDpU7VE6onFA5oXKHyh0qJ1TuUHnFEmsMy6wxLLHG8MGHqdyhckLlDpUTKidU7lA5oXJC5YTKCZUTKidU7lB5wxJrDEusMSyxxvDBhz1B5Q6VEyonVE6onFA5oXKHyh0qJ1ROqJxQOaHyhiXWGJZYY1hijcE++BdTOaFyQuWEyh0qJ1ROqJxQOaFyQuWEyomfWGKNYYk1hiXWGD74MJXfSeWEyh0qJ1TuUDmhckLlDpUTKidU7lB50xJrDEusMSyxxvDBh6m8SeUJKidUTqicUDmhckLlDpU7VE6o3KHypiXWGJZYY1hijcE++GVU7lA5oXJC5YTKCZUTKidUTqicUDmhckLlDpU7VJ5YYo1hiTWGJdYY7IM1xiXWGJZYY1hijWGJNYYl1hiWWGNYYo1hiTWGJdYYllhjWGKNYYk1hiXWGJZYY1hijf8BQe0FP3j3O6IAAAAASUVORK5CYII=";
 
     // Update connection status and QR code
-    await supabaseClient
+    const { error: updateError } = await supabaseClient
       .from('whatsapp_connections')
       .update({
         status: 'connecting',
-        qr_code: mockQRCode,
+        qr_code: qrCode,
         qr_code_timestamp: new Date().toISOString()
       })
       .eq('id', connectionId);
 
+    if (updateError) {
+      console.error('Error updating connection:', updateError);
+      return new Response(
+        JSON.stringify({ error: 'Database Error', details: 'Failed to update connection status' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     return new Response(
       JSON.stringify({ 
-        status: 'initializing',
+        status: 'success',
         userId: user.id,
-        connectionId 
+        connectionId,
+        qrCode
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

@@ -94,17 +94,22 @@ export function ConnectView({ botId }: ConnectViewProps) {
   const handleInitializeWhatsApp = async (connectionId: string) => {
     try {
       setIsInitializing(true);
-      await whatsappService.initializeWhatsApp(connectionId);
+      const { error } = await supabase.functions.invoke('whatsapp-init', {
+        body: { connectionId }
+      });
+
+      if (error) throw error;
+
       await loadConnections();
       toast({
         title: "Success",
-        description: "WhatsApp initialization started",
+        description: "WhatsApp QR code generated successfully",
       });
     } catch (error) {
       console.error("Failed to initialize WhatsApp:", error);
       toast({
         title: "Error",
-        description: "Failed to initialize WhatsApp",
+        description: "Failed to generate QR code. Please try again.",
         variant: "destructive",
       });
     } finally {
