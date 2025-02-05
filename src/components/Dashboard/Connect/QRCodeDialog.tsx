@@ -39,9 +39,13 @@ export function QRCodeDialog({
           {connection.qr_code ? (
             <div className="flex justify-center">
               <img
-                src={`data:image/png;base64,${connection.qr_code}`}
+                src={connection.qr_code.startsWith('data:image') ? connection.qr_code : `data:image/png;base64,${connection.qr_code}`}
                 alt="WhatsApp QR Code"
                 className="w-64 h-64"
+                onError={(e) => {
+                  console.error('Error loading QR code:', e);
+                  e.currentTarget.style.display = 'none';
+                }}
               />
             </div>
           ) : (
