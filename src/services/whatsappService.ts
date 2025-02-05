@@ -25,7 +25,6 @@ class WhatsAppService {
 
       if (error) throw error;
       
-      // Type assertion to ensure status is of correct type
       return (data || []).map(connection => ({
         ...connection,
         status: (connection.status || 'disconnected') as WhatsAppStatus
@@ -49,7 +48,6 @@ class WhatsAppService {
 
       if (error) throw error;
       
-      // Type assertion to ensure status is of correct type
       return {
         ...data,
         status: (data.status || 'disconnected') as WhatsAppStatus
@@ -75,36 +73,56 @@ class WhatsAppService {
   }
 
   async initializeWhatsApp(connectionId: string): Promise<void> {
-    // Get the current session
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError) throw sessionError;
-    if (!session) throw new Error('No active session');
-
-    const { error } = await supabase.functions.invoke('whatsapp-init', {
-      body: { connectionId },
-      headers: {
-        Authorization: `Bearer ${session.access_token}`
+    try {
+      // Get the current session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) {
+        console.error('Session error:', sessionError);
+        throw new Error('Failed to get authentication session');
       }
-    });
+      if (!session) {
+        console.error('No active session found');
+        throw new Error('No active session');
+      }
 
-    if (error) throw error;
+      console.log('Initializing WhatsApp with session token:', !!session.access_token);
+
+      const { error } = await supabase.functions.invoke('whatsapp-init', {
+        body: { connectionId },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        }
+      });
+
+      if (error) {
+        console.error('WhatsApp initialization error:', error);
+        throw error;
+      }
+    } catch (error) {
+      console.error('Failed to initialize WhatsApp:', error);
+      throw error;
+    }
   }
 
   async getQRCode(connectionId: string): Promise<string | null> {
-    // Get the current session
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError) throw sessionError;
-    if (!session) throw new Error('No active session');
+    try {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      if (!session) throw new Error('No active session');
 
-    const { data, error } = await supabase.functions.invoke('whatsapp-qr', {
-      body: { connectionId },
-      headers: {
-        Authorization: `Bearer ${session.access_token}`
-      }
-    });
+      const { data, error } = await supabase.functions.invoke('whatsapp-qr', {
+        body: { connectionId },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        }
+      });
 
-    if (error) throw error;
-    return data?.qrCode || null;
+      if (error) throw error;
+      return data?.qrCode || null;
+    } catch (error) {
+      console.error('Failed to get QR code:', error);
+      throw error;
+    }
   }
 }
 
