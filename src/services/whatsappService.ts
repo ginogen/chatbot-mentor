@@ -73,20 +73,13 @@ class WhatsAppService {
   async initializeWhatsApp(connectionId: string): Promise<void> {
     try {
       // Get the current session
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
       
-      if (sessionError) {
-        console.error('Session error:', sessionError);
-        throw new Error('Failed to get authentication session');
-      }
-
       if (!session) {
-        console.error('No active session');
         throw new Error('No active session found. Please log in again.');
       }
 
       console.log('Session found, initializing WhatsApp...');
-      console.log('Connection ID:', connectionId);
       
       const { error: functionError } = await supabase.functions.invoke('whatsapp-init', {
         body: { connectionId },

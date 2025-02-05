@@ -14,12 +14,13 @@ serve(async (req) => {
   }
 
   try {
+    // Get the authorization header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       throw new Error('Missing authorization header');
     }
 
-    // Initialize Supabase client
+    // Initialize Supabase client with the auth header
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -30,7 +31,17 @@ serve(async (req) => {
       }
     );
 
-    // Get and validate connection ID
+    // Get the JWT and verify it
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
+
+    if (authError || !user) {
+      console.error('Auth error:', authError);
+      throw new Error('Invalid authentication');
+    }
+
+    // Get and validate connection ID from request body
     const { connectionId } = await req.json();
     if (!connectionId) {
       throw new Error('Missing connectionId parameter');
@@ -55,7 +66,7 @@ serve(async (req) => {
 
       if (qr) {
         // Update connection with QR code
-        const { error } = await supabaseClient
+        const { error: updateError } = await supabaseClient
           .from('whatsapp_connections')
           .update({
             qr_code: qr,
@@ -64,14 +75,14 @@ serve(async (req) => {
           })
           .eq('id', connectionId);
 
-        if (error) {
-          console.error('Error updating QR code:', error);
+        if (updateError) {
+          console.error('Error updating QR code:', updateError);
         }
       }
 
       if (connection === 'open') {
         // Update connection status to connected
-        const { error } = await supabaseClient
+        const { error: updateError } = await supabaseClient
           .from('whatsapp_connections')
           .update({
             status: 'connected',
@@ -79,8 +90,8 @@ serve(async (req) => {
           })
           .eq('id', connectionId);
 
-        if (error) {
-          console.error('Error updating connection status:', error);
+        if (updateError) {
+          console.error('Error updating connection status:', updateError);
         }
       }
     });
@@ -109,7 +120,7 @@ serve(async (req) => {
         error: error instanceof Error ? error.message : 'Unknown error',
       }),
       { 
-        status: error instanceof Error && error.message.includes('Unauthorized') ? 401 : 500,
+        status: error instanceof Error && error.message.includes('Invalid authentication') ? 401 : 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
