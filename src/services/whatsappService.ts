@@ -1,13 +1,10 @@
 import { supabase } from "@/integrations/supabase/client";
-import { Database } from "@/integrations/supabase/types";
-
-type WhatsAppStatus = "disconnected" | "connecting" | "connected";
 
 export interface WhatsAppConnection {
   id: string;
   bot_id: string | null;
   phone_number: string | null;
-  status: WhatsAppStatus;
+  status: "disconnected" | "connecting" | "connected";
   session_data: any;
   created_at: string;
   updated_at: string;
@@ -74,62 +71,79 @@ class WhatsAppService {
 
   async initializeWhatsApp(connectionId: string): Promise<void> {
     try {
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError) {
-        console.error('Session error:', sessionError);
-        throw new Error('Failed to get authentication session');
-      }
+      // Primero verificamos si hay una sesión activa
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
-      const session = sessionData?.session;
-      if (!session) {
-        console.error('No active session found');
-        throw new Error('No active session');
+      if (sessionError) {
+        console.error('Error de sesión:', sessionError);
+        throw new Error('No se pudo obtener la sesión de autenticación');
       }
 
-      console.log('Session found, initializing WhatsApp...');
+      if (!session) {
+        console.error('No hay sesión activa');
+        // Intentamos refrescar la sesión
+        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError || !refreshData.session) {
+          throw new Error('No hay sesión activa y no se pudo refrescar');
+        }
+      }
+
+      const currentSession = session || (await supabase.auth.getSession()).data.session;
+      if (!currentSession) {
+        throw new Error('No se pudo establecer una sesión válida');
+      }
+
+      console.log('Sesión encontrada, inicializando WhatsApp...');
       
       const { error: functionError } = await supabase.functions.invoke('whatsapp-init', {
         body: { connectionId },
         headers: {
-          Authorization: `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${currentSession.access_token}`,
         }
       });
 
       if (functionError) {
-        console.error('WhatsApp initialization error:', functionError);
+        console.error('Error al inicializar WhatsApp:', functionError);
         throw functionError;
       }
     } catch (error) {
-      console.error('Failed to initialize WhatsApp:', error);
+      console.error('Error al inicializar WhatsApp:', error);
       throw error;
     }
   }
 
   async getQRCode(connectionId: string): Promise<string | null> {
     try {
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
       if (sessionError) {
-        console.error('Session error:', sessionError);
+        console.error('Error de sesión:', sessionError);
         throw sessionError;
       }
-      
-      const session = sessionData?.session;
+
       if (!session) {
-        console.error('No active session found');
-        throw new Error('No active session');
+        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError || !refreshData.session) {
+          throw new Error('No hay sesión activa y no se pudo refrescar');
+        }
+      }
+
+      const currentSession = session || (await supabase.auth.getSession()).data.session;
+      if (!currentSession) {
+        throw new Error('No se pudo establecer una sesión válida');
       }
 
       const { data, error } = await supabase.functions.invoke('whatsapp-qr', {
         body: { connectionId },
         headers: {
-          Authorization: `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${currentSession.access_token}`,
         }
       });
 
       if (error) throw error;
       return data?.qrCode || null;
     } catch (error) {
-      console.error('Failed to get QR code:', error);
+      console.error('Error al obtener el código QR:', error);
       throw error;
     }
   }
