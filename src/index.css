@@ -32,7 +32,7 @@
     @apply border-border;
   }
   body {
-    @apply bg-[#13141C] text-foreground;
+    @apply bg-[#13141C] text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
@@ -48,18 +48,6 @@
   
   .text-gradient {
     @apply bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent;
-  }
-
-  .nav-item {
-    @apply relative flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 hover:bg-white/10;
-  }
-
-  .nav-item.active {
-    @apply bg-primary/10 text-primary;
-  }
-
-  .nav-item .icon {
-    @apply w-5 h-5 transition-colors duration-200;
   }
 
   .glass-effect {
