@@ -14,41 +14,73 @@ serve(async (req) => {
   }
 
   try {
-    const { botId } = await req.json()
+    const { connectionId } = await req.json()
+    if (!connectionId) {
+      throw new Error('ConnectionId is required')
+    }
+
+    console.log('Initializing WhatsApp connection for:', connectionId)
     
     // Create Supabase client
     const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL'),
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const { auth, saveCreds, removeCreds } = await useMultiFileAuthState('auth_info_baileys')
+    // Get connection details
+    const { data: connection, error: connectionError } = await supabaseClient
+      .from('whatsapp_connections')
+      .select('*')
+      .eq('id', connectionId)
+      .single()
+
+    if (connectionError || !connection) {
+      throw new Error('Connection not found')
+    }
+
+    // Initialize session state handlers
+    const { state, saveCreds } = await useMultiFileAuthState(`auth_${connectionId}`)
+    
+    console.log('Creating WhatsApp socket...')
     
     const sock = makeWASocket({
-      auth,
+      auth: state,
       printQRInTerminal: true,
       browser: Browsers.ubuntu('Chrome'),
+      generateHighQualityLinkPreview: true,
     })
 
+    // Handle connection updates
     sock.ev.on('connection.update', async (update) => {
       const { connection, lastDisconnect, qr } = update
+      console.log('Connection update:', update)
       
       if (qr) {
-        // Convert QR to base64 image
-        const qrBase64 = await qrcode.toDataURL(qr)
-        
-        // Update whatsapp_connections with QR code
-        await supabaseClient
-          .from('whatsapp_connections')
-          .upsert({
-            bot_id: botId,
-            qr_code: qrBase64,
-            qr_code_timestamp: new Date().toISOString(),
-            status: 'awaiting_qr'
-          })
+        try {
+          console.log('New QR code received, converting to base64...')
+          // Convert QR to base64 image
+          const qrBase64 = await qrcode.toDataURL(qr)
+          
+          // Update whatsapp_connections with QR code
+          const { error: updateError } = await supabaseClient
+            .from('whatsapp_connections')
+            .update({
+              qr_code: qrBase64,
+              qr_code_timestamp: new Date().toISOString(),
+              status: 'connecting'
+            })
+            .eq('id', connectionId)
+
+          if (updateError) {
+            console.error('Error updating QR code:', updateError)
+          }
+        } catch (error) {
+          console.error('Error processing QR code:', error)
+        }
       }
 
       if (connection === 'close') {
+        console.log('Connection closed, updating status...')
         await supabaseClient
           .from('whatsapp_connections')
           .update({ 
@@ -56,10 +88,11 @@ serve(async (req) => {
             qr_code: null,
             qr_code_timestamp: null
           })
-          .eq('bot_id', botId)
+          .eq('id', connectionId)
       }
 
       if (connection === 'open') {
+        console.log('Connection opened, updating status...')
         await supabaseClient
           .from('whatsapp_connections')
           .update({ 
@@ -68,18 +101,25 @@ serve(async (req) => {
             qr_code_timestamp: null,
             phone_number: sock.user.id.split(':')[0]
           })
-          .eq('bot_id', botId)
+          .eq('id', connectionId)
       }
     })
 
+    // Handle credentials update
+    sock.ev.on('creds.update', saveCreds)
+
     return new Response(
-      JSON.stringify({ message: 'WhatsApp initialization started' }),
+      JSON.stringify({ 
+        message: 'WhatsApp initialization started',
+        connectionId 
+      }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200 
       }
     )
   } catch (error) {
+    console.error('Error in WhatsApp initialization:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
       { 
