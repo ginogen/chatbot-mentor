@@ -48,15 +48,26 @@ serve(async (req) => {
       printQRInTerminal: true,
       browser: Browsers.ubuntu('Chrome'),
       generateHighQualityLinkPreview: true,
-      // Configuración específica de la versión de WhatsApp Web
       version: [2, 2414, 7],
-      // Timeouts más largos para dar tiempo a escanear
       connectTimeoutMs: 90_000,
       qrTimeout: 60_000,
       defaultQueryTimeoutMs: 90_000,
-      // Configuración para mejorar la estabilidad
       retryRequestDelayMs: 250,
-      logger: console, // Activamos logging detallado
+      logger: console,
+      // Añadimos configuración específica para Edge Functions
+      agent: undefined, // Deshabilitamos el agente HTTP personalizado
+      fetchAgent: undefined, // Deshabilitamos el agente fetch personalizado
+      transactionOpts: { // Configuración de transacción más robusta
+        maxCommitRetries: 10,
+        delayBetweenTriesMs: 3000
+      },
+      // Configuración de WebSocket más robusta
+      ws: {
+        connectTimeoutMs: 30000,
+        keepAliveIntervalMs: 10000,
+        retryOnNetworkError: true,
+        maxRetries: 5
+      }
     })
 
     // Handle connection updates
@@ -67,7 +78,6 @@ serve(async (req) => {
       if (qr) {
         try {
           console.log('New QR code received, generating with WhatsApp Web specs...')
-          // Configuración específica para QR de WhatsApp Web
           const qrOptions = {
             margin: 4,
             scale: 6,
