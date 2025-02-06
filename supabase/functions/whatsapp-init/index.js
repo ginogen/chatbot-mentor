@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from '@supabase/supabase-js'
-import { makeWASocket, useMultiFileAuthState, Browsers } from '@whiskeysockets/baileys'
+import { makeWASocket, useMultiFileAuthState, Browsers, DisconnectReason } from '@whiskeysockets/baileys'
 import qrcode from 'qrcode'
 
 const corsHeaders = {
@@ -48,6 +48,11 @@ serve(async (req) => {
       printQRInTerminal: true,
       browser: Browsers.ubuntu('Chrome'),
       generateHighQualityLinkPreview: true,
+      // Añadimos configuraciones específicas para mejorar la compatibilidad
+      version: [2, 2323, 4],
+      connectTimeoutMs: 60_000,
+      qrTimeout: 40_000,
+      defaultQueryTimeoutMs: 60_000,
     })
 
     // Handle connection updates
@@ -58,8 +63,16 @@ serve(async (req) => {
       if (qr) {
         try {
           console.log('New QR code received, converting to base64...')
-          // Convert QR to base64 image
-          const qrBase64 = await qrcode.toDataURL(qr)
+          // Configuramos opciones específicas para el QR de WhatsApp
+          const qrOptions = {
+            margin: 3,
+            scale: 4,
+            errorCorrectionLevel: 'L',
+            type: 'image/png',
+          }
+          
+          // Convert QR to base64 image with specific options
+          const qrBase64 = await qrcode.toDataURL(qr, qrOptions)
           
           // Update whatsapp_connections with QR code
           const { error: updateError } = await supabaseClient
@@ -81,10 +94,13 @@ serve(async (req) => {
 
       if (connection === 'close') {
         console.log('Connection closed, updating status...')
+        const statusCode = lastDisconnect?.error?.output?.statusCode
+        const shouldReconnect = statusCode === DisconnectReason.loggedOut
+        
         await supabaseClient
           .from('whatsapp_connections')
           .update({ 
-            status: 'disconnected',
+            status: shouldReconnect ? 'disconnected' : 'error',
             qr_code: null,
             qr_code_timestamp: null
           })
@@ -99,7 +115,7 @@ serve(async (req) => {
             status: 'connected',
             qr_code: null,
             qr_code_timestamp: null,
-            phone_number: sock.user.id.split(':')[0]
+            phone_number: sock.user?.id?.split(':')[0]
           })
           .eq('id', connectionId)
       }
