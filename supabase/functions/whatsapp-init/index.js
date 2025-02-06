@@ -48,11 +48,15 @@ serve(async (req) => {
       printQRInTerminal: true,
       browser: Browsers.ubuntu('Chrome'),
       generateHighQualityLinkPreview: true,
-      // Añadimos configuraciones específicas para mejorar la compatibilidad
-      version: [2, 2323, 4],
-      connectTimeoutMs: 60_000,
-      qrTimeout: 40_000,
-      defaultQueryTimeoutMs: 60_000,
+      // Configuración específica de la versión de WhatsApp Web
+      version: [2, 2414, 7],
+      // Timeouts más largos para dar tiempo a escanear
+      connectTimeoutMs: 90_000,
+      qrTimeout: 60_000,
+      defaultQueryTimeoutMs: 90_000,
+      // Configuración para mejorar la estabilidad
+      retryRequestDelayMs: 250,
+      logger: console, // Activamos logging detallado
     })
 
     // Handle connection updates
@@ -62,16 +66,17 @@ serve(async (req) => {
       
       if (qr) {
         try {
-          console.log('New QR code received, converting to base64...')
-          // Configuramos opciones específicas para el QR de WhatsApp
+          console.log('New QR code received, generating with WhatsApp Web specs...')
+          // Configuración específica para QR de WhatsApp Web
           const qrOptions = {
-            margin: 3,
-            scale: 4,
-            errorCorrectionLevel: 'L',
+            margin: 4,
+            scale: 6,
+            errorCorrectionLevel: 'M',
             type: 'image/png',
+            quality: 0.95,
+            width: 512,
           }
           
-          // Convert QR to base64 image with specific options
           const qrBase64 = await qrcode.toDataURL(qr, qrOptions)
           
           // Update whatsapp_connections with QR code
@@ -93,9 +98,12 @@ serve(async (req) => {
       }
 
       if (connection === 'close') {
-        console.log('Connection closed, updating status...')
+        console.log('Connection closed, checking reason...')
         const statusCode = lastDisconnect?.error?.output?.statusCode
-        const shouldReconnect = statusCode === DisconnectReason.loggedOut
+        const shouldReconnect = statusCode === DisconnectReason.loggedOut || 
+                              statusCode === DisconnectReason.connectionClosed
+        
+        console.log('Disconnect reason:', { statusCode, shouldReconnect })
         
         await supabaseClient
           .from('whatsapp_connections')
@@ -108,7 +116,7 @@ serve(async (req) => {
       }
 
       if (connection === 'open') {
-        console.log('Connection opened, updating status...')
+        console.log('Connection opened successfully!')
         await supabaseClient
           .from('whatsapp_connections')
           .update({ 
