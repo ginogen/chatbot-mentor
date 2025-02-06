@@ -207,24 +207,36 @@ export type Database = {
           conversation_id: string | null
           created_at: string
           id: string
+          media_url: string | null
+          message_type: string | null
           rating: string | null
           role: string
+          status: string | null
+          whatsapp_message_id: string | null
         }
         Insert: {
           content: string
           conversation_id?: string | null
           created_at?: string
           id?: string
+          media_url?: string | null
+          message_type?: string | null
           rating?: string | null
           role: string
+          status?: string | null
+          whatsapp_message_id?: string | null
         }
         Update: {
           content?: string
           conversation_id?: string | null
           created_at?: string
           id?: string
+          media_url?: string | null
+          message_type?: string | null
           rating?: string | null
           role?: string
+          status?: string | null
+          whatsapp_message_id?: string | null
         }
         Relationships: [
           {
@@ -336,9 +348,12 @@ export type Database = {
           bot_id: string | null
           created_at: string
           id: string
+          last_ping: string | null
           phone_number: string | null
           qr_code: string | null
           qr_code_timestamp: string | null
+          server_status: string | null
+          server_url: string | null
           session_data: Json | null
           status: string | null
           updated_at: string
@@ -347,9 +362,12 @@ export type Database = {
           bot_id?: string | null
           created_at?: string
           id?: string
+          last_ping?: string | null
           phone_number?: string | null
           qr_code?: string | null
           qr_code_timestamp?: string | null
+          server_status?: string | null
+          server_url?: string | null
           session_data?: Json | null
           status?: string | null
           updated_at?: string
@@ -358,9 +376,12 @@ export type Database = {
           bot_id?: string | null
           created_at?: string
           id?: string
+          last_ping?: string | null
           phone_number?: string | null
           qr_code?: string | null
           qr_code_timestamp?: string | null
+          server_status?: string | null
+          server_url?: string | null
           session_data?: Json | null
           status?: string | null
           updated_at?: string
